@@ -61,31 +61,36 @@ The migrations replace broad anonymous access with authenticated, role-limited
 policies. The login profile migration links an existing institute profile to a
 Supabase Auth account when their email matches and Supabase confirms the email.
 
-### Staff, student, and parent accounts
+### Deploy account management
 
-The Admin first creates teacher and student records in the application. In
-Supabase **Authentication → Users**, add the corresponding Auth user with the
-same email as the existing `public.users` profile. After the user confirms
-their email and signs in, the login profile migration links the matching record.
-Repeat this for each teacher and student who needs portal access.
+The Admin dashboard creates Auth accounts through a Supabase Edge Function so
+the administrator's browser session remains signed in. Link the Supabase CLI
+to the institute project and deploy the function:
 
-There is no parent-enrollment form yet. Create a parent profile and link the
-student record in SQL Editor before adding the matching Auth user:
-
-```sql
-insert into public.users (full_name, email, role)
-values ('Parent Name', 'parent@example.org', 'parent')
-returning id;
-
-update public.students
-set parent_id = '<returned-parent-profile-id>'
-where admission_no = '<student-admission-number>';
+```powershell
+supabase link --project-ref <project-ref>
+supabase functions deploy manage-accounts
 ```
 
-Then add the Auth user in Supabase with the same parent email. The parent
-dashboard will show only students explicitly linked through `parent_id`.
-Teacher, student, and parent portals are read-only; RLS limits each portal to
-the user's assigned classes, own student record, or linked children.
+The function uses Supabase's `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and
+`SUPABASE_SERVICE_ROLE_KEY` server-side environment variables. Ensure the
+service-role key is configured as an Edge Function secret if it is not already
+available in the project's runtime. Never put it in the browser `.env` file or
+in any `VITE_` variable.
+
+### Staff, student, and parent accounts
+
+From the Admin dashboard's **Quick actions** or the Students and Teachers
+management pages, create teacher and student accounts with their initial
+passwords. The student form can also create a linked parent account. Account
+profiles and student/teacher records are created together; no separate
+Supabase Dashboard account setup is required. Initial passwords must contain
+at least 12 characters.
+
+The parent dashboard shows only students explicitly linked through
+`students.parent_id`. Teacher, student, and parent portals are read-only; RLS
+limits each portal to the user's assigned classes, own student record, or
+linked children.
 
 Run the app:
 

@@ -139,32 +139,12 @@ export async function fetchStudentsPage() {
   return { students: unwrap(students), classes: unwrap(classes) }
 }
 
-export async function createStudent({ fullName, email, admissionNo, classId, rollNo, status }) {
-  const user = unwrap(
-    await supabase
-      .from('users')
-      .insert({ full_name: fullName, email, role: 'student' })
-      .select('id')
-      .single()
-  )
-
-  try {
-    unwrap(
-      await supabase.from('students').insert({
-        user_id: user.id,
-        admission_no: admissionNo,
-        class_id: classId || null,
-        roll_no: rollNo === '' ? null : Number(rollNo),
-        status,
-      })
-    )
-  } catch (error) {
-    const rollback = await supabase.from('users').delete().eq('id', user.id)
-    if (rollback.error) {
-      throw new Error(`${error.message} Also, the new user profile could not be removed: ${rollback.error.message}`)
-    }
-    throw error
-  }
+export async function createStudent(values) {
+  const { data, error } = await supabase.functions.invoke('manage-accounts', {
+    body: { action: 'create_student', ...values },
+  })
+  if (error) throw new Error(error.message)
+  return data
 }
 
 export async function updateStudent(student, { fullName, email, admissionNo, classId, rollNo, status }) {
@@ -212,30 +192,12 @@ export async function fetchTeachersPage() {
   )
 }
 
-export async function createTeacher({ fullName, email, phone, employeeCode, subject, status }) {
-  const user = unwrap(
-    await supabase
-      .from('users')
-      .insert({ full_name: fullName, email, phone: phone || null, role: 'teacher' })
-      .select('id')
-      .single()
-  )
-  try {
-    unwrap(
-      await supabase.from('teachers').insert({
-        user_id: user.id,
-        employee_code: employeeCode,
-        subject,
-        status,
-      })
-    )
-  } catch (error) {
-    const rollback = await supabase.from('users').delete().eq('id', user.id)
-    if (rollback.error) {
-      throw new Error(`${error.message} Also, the new user profile could not be removed: ${rollback.error.message}`)
-    }
-    throw error
-  }
+export async function createTeacher(values) {
+  const { data, error } = await supabase.functions.invoke('manage-accounts', {
+    body: { action: 'create_teacher', ...values },
+  })
+  if (error) throw new Error(error.message)
+  return data
 }
 
 export async function updateTeacher(teacher, { fullName, email, phone, employeeCode, subject, status }) {

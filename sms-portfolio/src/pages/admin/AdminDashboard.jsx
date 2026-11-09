@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { CalendarCheck, GraduationCap, Users, Wallet } from 'lucide-react'
 import { useAsync } from '../../hooks/useAsync.js'
-import { fetchAdminOverview, fetchStudentDirectory } from '../../lib/api.js'
+import { fetchAdminOverview, fetchClassesPage, fetchStudentDirectory } from '../../lib/api.js'
 import { attendanceRate, dailyAttendance, feeState, groupBy, monthlyRevenue } from '../../lib/analytics.js'
 import { pct, pkrCompact } from '../../lib/format.js'
 import StatCard from '../../components/ui/StatCard.jsx'
@@ -10,6 +10,7 @@ import { ErrorState, Skeleton } from '../../components/ui/States.jsx'
 import AttendanceChart from '../../components/admin/AttendanceChart.jsx'
 import RevenueChart from '../../components/admin/RevenueChart.jsx'
 import StudentTable from '../../components/admin/StudentTable.jsx'
+import AdminQuickActions from '../../components/admin/AdminQuickActions.jsx'
 
 const grid = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } }
 const cell = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } } }
@@ -75,8 +76,9 @@ function AdminContent({ overview, directory }) {
 export default function AdminDashboard() {
   const overview = useAsync(fetchAdminOverview, [], ['students', 'teachers', 'fees', 'attendance'])
   const directory = useAsync(fetchStudentDirectory, [], ['students', 'users', 'classes'])
+  const classes = useAsync(fetchClassesPage, [], ['classes'])
 
-  const error = overview.error ?? directory.error
+  const error = overview.error ?? directory.error ?? classes.error
   if (error) {
     return (
       <ErrorState
@@ -84,12 +86,13 @@ export default function AdminDashboard() {
         onRetry={() => {
           overview.reload()
           directory.reload()
+          classes.reload()
         }}
       />
     )
   }
 
-  if (!overview.data || !directory.data) {
+  if (!overview.data || !directory.data || !classes.data) {
     return (
       <div className="space-y-6" aria-busy="true" aria-label="Loading dashboard">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -106,6 +109,11 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      <AdminQuickActions
+        students={directory.data}
+        classes={classes.data.classes}
+        onSaved={() => Promise.all([overview.reload(), directory.reload(), classes.reload()])}
+      />
       <AdminContent overview={overview.data} directory={directory.data} />
     </div>
   )
