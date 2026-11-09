@@ -67,13 +67,12 @@ From the Admin dashboard's **Quick actions** or the Students and Teachers
 management pages, add student and teacher records directly to the database.
 Student enrollment creates a `public.users` profile and a linked
 `public.students` record, but does not create an Auth login. Teacher creation
-creates the teacher's `public.users` profile and linked `public.teachers`
-record, then registers the Auth account through Supabase Auth. The Auth signup
-client does not persist its session, so it does not replace the administrator's
-session. Editing a teacher password uses the admin-authorized
-`manage-accounts` Edge Function, which must be deployed with the Supabase CLI
-and configured with the server-side service-role key. Never store passwords in
-public database tables.
+uses the `manage-accounts` Edge Function and Supabase's server-side Auth Admin
+API to create the teacher's Auth account, `public.users` profile, and linked
+`public.teachers` record. This avoids browser `signUp` rate limits and keeps
+the admin session intact. Deploy the function with the Supabase CLI and keep
+the service-role key server-side. Editing a teacher password uses the same
+admin-authorized function. Never store passwords in public database tables.
 
 The parent dashboard shows only students explicitly linked through
 `students.parent_id`. Teacher, student, and parent portals are read-only; RLS

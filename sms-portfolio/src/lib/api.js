@@ -1,12 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
 import { supabase } from './supabaseClient.js'
 import { daysAgo, toISODate } from './format.js'
-
-const teacherAuthClient = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-  { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
-)
 
 /** supabase-js resolves with { data, error }. Turn errors into thrown exceptions. */
 function unwrap({ data, error }) {
@@ -227,63 +220,20 @@ export async function fetchTeachersPage() {
 }
 
 export async function createTeacher(values) {
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .insert({
-      full_name: values.fullName.trim(),
+  const { data, error } = await supabase.functions.invoke('manage-accounts', {
+    body: {
+      action: 'create_teacher',
+      ...values,
+      fullName: values.fullName.trim(),
       email: values.email.trim().toLowerCase(),
-      role: 'teacher',
-      phone: values.phone?.trim() || null,
-    })
-    .select('id')
-    .single()
-  if (profileError) throw new Error(profileError.message)
-
-  const { error: teacherError } = await supabase.from('teachers').insert({
-    user_id: profile.id,
-    employee_code: values.employeeCode.trim(),
-    subject: values.subject.trim(),
-    status: values.status || 'active',
+      employeeCode: values.employeeCode.trim(),
+      subject: values.subject.trim(),
+      phone: values.phone?.trim() || '',
+    },
   })
-  if (teacherError) {
-    const { error: cleanupError } = await supabase.from('users').delete().eq('id', profile.id)
-    if (cleanupError) {
-      throw new Error(`${teacherError.message} The unlinked profile cleanup also failed: ${cleanupError.message}`)
-    }
-    throw new Error(teacherError.message)
-  }
-
-  const { data: authData, error: authError } = await teacherAuthClient.auth.signUp({
-    email: values.email.trim().toLowerCase(),
-    password: values.password,
-    options: { data: { full_name: values.fullName.trim(), role: 'teacher' } },
-  })
-  if (authError) {
-    const { error: cleanupError } = await supabase.from('users').delete().eq('id', profile.id)
-    if (cleanupError) {
-      throw new Error(`${authError.message} The profile cleanup also failed: ${cleanupError.message}`)
-    }
-    throw new Error(authError.message)
-  }
-  if (!authData.user) {
-    const { error: cleanupError } = await supabase.from('users').delete().eq('id', profile.id)
-    if (cleanupError) {
-      throw new Error(`Supabase did not return a teacher Auth user. Profile cleanup also failed: ${cleanupError.message}`)
-    }
-    throw new Error('Supabase did not return a teacher Auth user. Check whether the email is already registered.')
-  }
-
-  const { data: linkedProfile, error: linkError } = await supabase
-    .from('users')
-    .select('auth_user_id, role')
-    .eq('id', profile.id)
-    .single()
-  if (linkError) throw new Error(`Teacher Auth account was created, but its institute profile could not be verified: ${linkError.message}`)
-  if (linkedProfile.auth_user_id !== authData.user.id || linkedProfile.role !== 'teacher') {
-    throw new Error('Teacher Auth account was created, but the Auth trigger did not link its teacher profile. Check the multirole auth migration.')
-  }
-
-  return { id: profile.id }
+  if (error) throw new Error(error.message)
+  if (data?.error) throw new Error(data.error)
+  return data
 }
 
 export async function updateTeacher(teacher, { fullName, email, phone, employeeCode, subject, status, password }) {
