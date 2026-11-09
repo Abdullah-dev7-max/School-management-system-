@@ -81,11 +81,11 @@ in any `VITE_` variable.
 ### Staff, student, and parent accounts
 
 From the Admin dashboard's **Quick actions** or the Students and Teachers
-management pages, create teacher and student accounts with their initial
-passwords. The student form can also create a linked parent account. Account
-profiles and student/teacher records are created together; no separate
-Supabase Dashboard account setup is required. Initial passwords must contain
-at least 12 characters.
+management pages, add student records directly to the database. Student
+enrollment creates a `public.users` profile and linked `public.students`
+record, but does not create a student Auth login. Teacher creation provisions
+an Auth login through the Edge Function and creates the linked staff records;
+initial passwords must contain at least 12 characters.
 
 The parent dashboard shows only students explicitly linked through
 `students.parent_id`. Teacher, student, and parent portals are read-only; RLS

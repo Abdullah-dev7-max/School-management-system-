@@ -24,15 +24,10 @@ function StudentDialog({ student, classes, onClose, onSave }) {
   const [form, setForm] = useState(() => ({
     fullName: student?.student?.full_name ?? '',
     email: student?.student?.email ?? '',
-    password: '',
     admissionNo: student?.admission_no ?? '',
     classId: student?.class_id ?? '',
     rollNo: student?.roll_no ?? '',
     status: student?.status ?? 'active',
-    parentName: '',
-    parentEmail: '',
-    parentPhone: '',
-    parentPassword: '',
   }))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -49,11 +44,6 @@ function StudentDialog({ student, classes, onClose, onSave }) {
 
   const submit = async (event) => {
     event.preventDefault()
-    if (!student && [form.parentName, form.parentEmail, form.parentPassword].some(Boolean)
-      && (!form.parentName.trim() || !form.parentEmail.trim() || !form.parentPassword)) {
-      setError('Provide the parent name, email, and initial password to create a parent account.')
-      return
-    }
     setSaving(true)
     setError('')
     try {
@@ -108,13 +98,6 @@ function StudentDialog({ student, classes, onClose, onSave }) {
             <input name="email" type="email" value={form.email} onChange={change} required maxLength={255} className={FIELD} />
           </label>
 
-          {!student && (
-            <label className="block text-sm font-medium">
-              Initial password (at least 12 characters)
-              <input name="password" type="password" autoComplete="new-password" value={form.password} onChange={change} minLength={12} required className={FIELD} />
-            </label>
-          )}
-
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium">
               Admission number
@@ -125,19 +108,6 @@ function StudentDialog({ student, classes, onClose, onSave }) {
               <input name="rollNo" type="number" min="1" step="1" value={form.rollNo} onChange={change} className={FIELD} />
             </label>
           </div>
-
-          {!student && (
-            <fieldset className="rounded-2xl border border-ink/10 bg-white/40 p-4">
-              <legend className="px-1 text-sm font-semibold">Parent account (optional)</legend>
-              <p className="mb-3 text-xs text-ink/55">Enter parent name, email and a 12-character password to create and link a parent login.</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-sm font-medium">Parent name<input name="parentName" value={form.parentName} onChange={change} className={FIELD} /></label>
-                <label className="block text-sm font-medium">Parent email<input name="parentEmail" type="email" value={form.parentEmail} onChange={change} className={FIELD} /></label>
-                <label className="block text-sm font-medium">Parent phone<input name="parentPhone" type="tel" value={form.parentPhone} onChange={change} className={FIELD} /></label>
-                <label className="block text-sm font-medium">Parent initial password<input name="parentPassword" type="password" autoComplete="new-password" value={form.parentPassword} onChange={change} minLength={form.parentPassword ? 12 : undefined} className={FIELD} /></label>
-              </div>
-            </fieldset>
-          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium">

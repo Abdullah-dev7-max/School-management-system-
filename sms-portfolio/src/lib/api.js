@@ -140,11 +140,38 @@ export async function fetchStudentsPage() {
 }
 
 export async function createStudent(values) {
-  const { data, error } = await supabase.functions.invoke('manage-accounts', {
-    body: { action: 'create_student', ...values },
-  })
-  if (error) throw new Error(error.message)
-  return data
+  const { data: profile, error: profileError } = await supabase
+    .from('users')
+    .insert({
+      full_name: values.fullName.trim(),
+      email: values.email.trim().toLowerCase(),
+      role: 'student',
+    })
+    .select('id')
+    .single()
+  if (profileError) throw new Error(profileError.message)
+
+  const { data: student, error: studentError } = await supabase
+    .from('students')
+    .insert({
+      user_id: profile.id,
+      admission_no: values.admissionNo.trim(),
+      roll_no: values.rollNo === '' || values.rollNo == null ? null : Number(values.rollNo),
+      class_id: values.classId || null,
+      status: values.status || 'active',
+    })
+    .select('id')
+    .single()
+
+  if (studentError) {
+    const { error: cleanupError } = await supabase.from('users').delete().eq('id', profile.id)
+    if (cleanupError) {
+      throw new Error(`${studentError.message} The unlinked profile cleanup also failed: ${cleanupError.message}`)
+    }
+    throw new Error(studentError.message)
+  }
+
+  return student
 }
 
 export async function updateStudent(student, { fullName, email, admissionNo, classId, rollNo, status }) {

@@ -14,10 +14,6 @@ const EMPTY_FORM = {
   classId: '',
   rollNo: '',
   admissionNo: '',
-  parentName: '',
-  parentEmail: '',
-  parentPhone: '',
-  parentPassword: '',
   employeeCode: '',
   subject: '',
   studentId: '',
@@ -31,7 +27,7 @@ const EMPTY_FORM = {
 }
 
 const ACTIONS = [
-  { id: 'student', label: 'Add New Student', icon: Users, description: 'Enroll a student and optionally create their parent account.' },
+  { id: 'student', label: 'Add New Student', icon: Users, description: 'Add a student profile and enrollment record.' },
   { id: 'teacher', label: 'Add New Teacher', icon: GraduationCap, description: 'Create a teacher login and staff record.' },
   { id: 'fee', label: 'Add Fee Record', icon: Wallet, description: 'Issue a fee voucher to an enrolled student.' },
   { id: 'marks', label: 'Add Marks', icon: BookOpenCheck, description: 'Enter an examination mark for a student.' },
@@ -49,15 +45,13 @@ function ActionForm({ action, students, classes, onClose, onSaved }) {
     setError('')
     try {
       if (action === 'student') {
-        const hasParent = form.parentName.trim() || form.parentEmail.trim() || form.parentPassword
-        if (hasParent && (!form.parentName.trim() || !form.parentEmail.trim() || !form.parentPassword)) {
-          throw new Error('Provide the parent name, email, and initial password to create a parent account.')
-        }
         await createStudent({
-          ...form,
           fullName: form.fullName.trim(),
           email: form.email.trim(),
           admissionNo: form.admissionNo.trim(),
+          classId: form.classId,
+          rollNo: form.rollNo,
+          status: 'active',
         })
       } else if (action === 'teacher') {
         await createTeacher({
@@ -103,7 +97,6 @@ function ActionForm({ action, students, classes, onClose, onSaved }) {
             <Field label="Full name" name="fullName" value={form.fullName} onChange={change} maxLength={120} required autoFocus />
             <Field label="Email" name="email" type="email" autoComplete="email" value={form.email} onChange={change} required />
           </div>
-          <Field label="Initial password (at least 12 characters)" name="password" type="password" autoComplete="new-password" minLength={12} value={form.password} onChange={change} required />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Admission number" name="admissionNo" value={form.admissionNo} onChange={change} required />
             <Field label="Roll number" name="rollNo" type="number" min="1" step="1" value={form.rollNo} onChange={change} />
@@ -112,16 +105,6 @@ function ActionForm({ action, students, classes, onClose, onSaved }) {
             <option value="">Unassigned</option>
             {classes.map((item) => <option key={item.id} value={item.id}>{item.name} {item.section}</option>)}
           </SelectField>
-          <div className="rounded-2xl border border-ink/10 bg-white/40 p-4">
-            <h3 className="text-sm font-semibold">Parent account (optional)</h3>
-            <p className="mt-1 text-xs text-ink/55">Fill all three required fields to create a linked parent login.</p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <Field label="Parent full name" name="parentName" value={form.parentName} onChange={change} />
-              <Field label="Parent email" name="parentEmail" type="email" autoComplete="email" value={form.parentEmail} onChange={change} />
-              <Field label="Parent phone" name="parentPhone" type="tel" value={form.parentPhone} onChange={change} />
-              <Field label="Parent initial password" name="parentPassword" type="password" autoComplete="new-password" minLength={form.parentPassword ? 12 : undefined} value={form.parentPassword} onChange={change} />
-            </div>
-          </div>
         </>}
 
         {action === 'teacher' && <>
