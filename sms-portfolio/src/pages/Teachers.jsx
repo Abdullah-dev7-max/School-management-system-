@@ -18,6 +18,7 @@ function TeacherForm({ teacher, onClose, onSave }) {
     fullName: teacher?.teacher?.full_name ?? '',
     email: teacher?.teacher?.email ?? '',
     phone: teacher?.teacher?.phone ?? '',
+    password: '',
     employeeCode: teacher?.employee_code ?? '',
     subject: teacher?.subject ?? '',
     status: teacher?.status ?? 'active',
@@ -38,6 +39,7 @@ function TeacherForm({ teacher, onClose, onSave }) {
         employeeCode: form.employeeCode.trim(),
         subject: form.subject.trim(),
         phone: form.phone.trim(),
+        password: form.password,
       })
     } catch (saveError) {
       setError(saveError.message)
@@ -57,6 +59,7 @@ function TeacherForm({ teacher, onClose, onSave }) {
           <Field label="Email" type="email" name="email" value={form.email} onChange={change} maxLength={255} required />
           <Field label="Phone" type="tel" name="phone" value={form.phone} onChange={change} maxLength={32} />
         </div>
+        {!teacher && <Field label="Initial password (at least 12 characters)" name="password" type="password" autoComplete="new-password" value={form.password} onChange={change} minLength={12} required />}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Employee code" name="employeeCode" value={form.employeeCode} onChange={change} maxLength={64} required />
           <Field label="Subject" name="subject" value={form.subject} onChange={change} maxLength={120} required />

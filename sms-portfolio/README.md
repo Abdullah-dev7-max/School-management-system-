@@ -65,9 +65,20 @@ Supabase Auth account when their email matches and Supabase confirms the email.
 
 From the Admin dashboard's **Quick actions** or the Students and Teachers
 management pages, add student and teacher records directly to the database.
-Enrollment creates a `public.users` profile and a linked `public.students` or
-`public.teachers` record. These forms do not create Supabase Auth logins;
-separately provision and link an Auth account if portal access is needed.
+Student enrollment creates a `public.users` profile and a linked
+`public.students` record, but does not create an Auth login. Teacher creation
+uses the `manage-accounts` Edge Function to securely provision the Auth user,
+profile, and linked `public.teachers` record. Deploy the function with the
+Supabase CLI:
+
+```powershell
+supabase link --project-ref <project-ref>
+supabase functions deploy manage-accounts
+```
+
+The function uses Supabase's server-side `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
+and `SUPABASE_SERVICE_ROLE_KEY`. Keep the service-role key server-side; never
+store passwords in public database tables or browser environment variables.
 
 The parent dashboard shows only students explicitly linked through
 `students.parent_id`. Teacher, student, and parent portals are read-only; RLS
