@@ -9,6 +9,7 @@ import { Field, FORM_BUTTON, FormError, ManagementModal, SelectField } from './M
 const EMPTY_FORM = {
   fullName: '',
   email: '',
+  password: '',
   phone: '',
   classId: '',
   rollNo: '',
@@ -60,6 +61,7 @@ function ActionForm({ action, students, classes, onClose, onSaved }) {
           employeeCode: form.employeeCode.trim(),
           subject: form.subject.trim(),
           phone: form.phone.trim(),
+          password: form.password,
         })
       } else if (action === 'fee') {
         await issueFeeVoucher({
@@ -110,6 +112,7 @@ function ActionForm({ action, students, classes, onClose, onSaved }) {
             <Field label="Full name" name="fullName" value={form.fullName} onChange={change} maxLength={120} required autoFocus />
             <Field label="Email" name="email" type="email" autoComplete="email" value={form.email} onChange={change} required />
           </div>
+          <Field label="Initial password (at least 12 characters)" name="password" type="password" autoComplete="new-password" minLength={12} value={form.password} onChange={change} required />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Subject" name="subject" value={form.subject} onChange={change} required />
             <Field label="Phone number" name="phone" type="tel" value={form.phone} onChange={change} />

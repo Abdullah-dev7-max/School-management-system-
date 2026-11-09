@@ -168,7 +168,7 @@ Deno.serve(async (request) => {
         user_id: primary.profileId,
         employee_code: input.employeeCode.trim(),
         subject: input.subject.trim(),
-        status: 'active',
+        status: input.status === 'inactive' ? 'inactive' : 'active',
       })
       if (teacherError) throw teacherError
     }
