@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, GraduationCap, LoaderCircle, LockKeyhole, Mail, X } from 'lucide-react'
 import { ROLES } from '../config/navigation.js'
+import { useRole } from '../context/RoleContext.jsx'
 import { supabase, setRememberSession } from '../lib/supabaseClient.js'
 import GlassCard from '../components/ui/GlassCard.jsx'
 
@@ -58,6 +59,7 @@ function PasswordResetModal({ initialEmail, onClose }) {
 }
 
 export default function Login() {
+  const { signIn, signOut } = useRole()
   const navigate = useNavigate()
   const [role, setRole] = useState('admin')
   const [email, setEmail] = useState('')
@@ -95,18 +97,8 @@ export default function Login() {
         setRegistering(false)
       } else {
         setRememberSession(remember)
-        const { data, error: loginError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        })
-        if (loginError) throw loginError
+        const profile = await signIn(email, password)
         authenticated = true
-        const { data: profile, error: profileError } = await supabase
-          .from('users')
-          .select('role')
-          .eq('auth_user_id', data.user.id)
-          .single()
-        if (profileError) throw new Error('This account is not linked to an institute profile. Contact your administrator.')
         if (profile.role !== role) {
           throw new Error(`This account belongs to the ${ROLES[profile.role]?.label ?? 'other'} role. Select the matching role and sign in again.`)
         }
@@ -114,8 +106,9 @@ export default function Login() {
       }
     } catch (submitError) {
       if (authenticated) {
-        const { error: signOutError } = await supabase.auth.signOut()
-        if (signOutError) {
+        try {
+          await signOut()
+        } catch (signOutError) {
           setError(`${submitError.message || 'Authentication failed.'} Sign-out also failed: ${signOutError.message}`)
           setBusy(false)
           return
