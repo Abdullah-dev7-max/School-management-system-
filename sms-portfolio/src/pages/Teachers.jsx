@@ -59,7 +59,17 @@ function TeacherForm({ teacher, onClose, onSave }) {
           <Field label="Email" type="email" name="email" value={form.email} onChange={change} maxLength={255} required />
           <Field label="Phone" type="tel" name="phone" value={form.phone} onChange={change} maxLength={32} />
         </div>
-        {!teacher && <Field label="Initial password (at least 12 characters)" name="password" type="password" autoComplete="new-password" value={form.password} onChange={change} minLength={12} required />}
+        <Field
+          label={teacher ? 'New password (optional)' : 'Initial password (at least 12 characters)'}
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          value={form.password}
+          onChange={change}
+          minLength={form.password ? 12 : undefined}
+          required={!teacher}
+          placeholder={teacher ? 'Leave blank to keep current password' : undefined}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Employee code" name="employeeCode" value={form.employeeCode} onChange={change} maxLength={64} required />
           <Field label="Subject" name="subject" value={form.subject} onChange={change} maxLength={120} required />

@@ -286,7 +286,7 @@ export async function createTeacher(values) {
   return { id: profile.id }
 }
 
-export async function updateTeacher(teacher, { fullName, email, phone, employeeCode, subject, status }) {
+export async function updateTeacher(teacher, { fullName, email, phone, employeeCode, subject, status, password }) {
   unwrap(
     await supabase
       .from('users')
@@ -310,6 +310,18 @@ export async function updateTeacher(teacher, { fullName, email, phone, employeeC
       throw new Error(`${result.error.message} The profile rollback also failed: ${rollback.error.message}`)
     }
     throw new Error(result.error.message)
+  }
+
+  if (password) {
+    const { data, error } = await supabase.functions.invoke('manage-accounts', {
+      body: { action: 'update_teacher_password', teacherId: teacher.id, password },
+    })
+    if (error) {
+      throw new Error(`Teacher details were saved, but the password could not be updated: ${error.message}`)
+    }
+    if (data?.error) {
+      throw new Error(`Teacher details were saved, but the password could not be updated: ${data.error}`)
+    }
   }
 }
 

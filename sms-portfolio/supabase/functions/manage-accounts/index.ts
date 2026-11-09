@@ -8,10 +8,11 @@ const corsHeaders = {
 }
 
 type AccountInput = {
-  action: 'create_student' | 'create_teacher'
+  action: 'create_student' | 'create_teacher' | 'update_teacher_password'
   fullName: string
   email: string
   password: string
+  teacherId?: string
   phone?: string
   admissionNo?: string
   classId?: string
@@ -55,34 +56,43 @@ Deno.serve(async (request) => {
   let input: AccountInput
   try {
     input = await request.json()
-    if (input.action !== 'create_student' && input.action !== 'create_teacher') {
-      return response({ error: 'Unsupported account creation action.' }, 400)
+    if (
+      input.action !== 'create_student'
+      && input.action !== 'create_teacher'
+      && input.action !== 'update_teacher_password'
+    ) {
+      return response({ error: 'Unsupported account action.' }, 400)
     }
 
-    requiredText(input.fullName, 'Full name')
-    requiredText(input.email, 'Email')
-    validatePassword(input.password, 'Initial password')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim())) {
-      throw new Error('Enter a valid email address.')
-    }
-    if (input.action === 'create_student') {
-      requiredText(input.admissionNo, 'Admission number')
-      if (input.rollNo !== '' && input.rollNo != null && (!Number.isInteger(Number(input.rollNo)) || Number(input.rollNo) < 1)) {
-        throw new Error('Roll number must be a positive whole number.')
-      }
-
-      const parentFields = [input.parentName, input.parentEmail, input.parentPassword]
-      if (parentFields.some((value) => Boolean(value?.trim?.()))) {
-        requiredText(input.parentName, 'Parent name')
-        requiredText(input.parentEmail, 'Parent email')
-        validatePassword(input.parentPassword, 'Parent initial password')
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.parentEmail.trim())) {
-          throw new Error('Enter a valid parent email address.')
-        }
-      }
+    validatePassword(input.password, input.action === 'update_teacher_password' ? 'New password' : 'Initial password')
+    if (input.action === 'update_teacher_password') {
+      requiredText(input.teacherId, 'Teacher')
     } else {
-      requiredText(input.employeeCode, 'Employee code')
-      requiredText(input.subject, 'Subject')
+      requiredText(input.fullName, 'Full name')
+      requiredText(input.email, 'Email')
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim())) {
+        throw new Error('Enter a valid email address.')
+      }
+
+      if (input.action === 'create_student') {
+        requiredText(input.admissionNo, 'Admission number')
+        if (input.rollNo !== '' && input.rollNo != null && (!Number.isInteger(Number(input.rollNo)) || Number(input.rollNo) < 1)) {
+          throw new Error('Roll number must be a positive whole number.')
+        }
+
+        const parentFields = [input.parentName, input.parentEmail, input.parentPassword]
+        if (parentFields.some((value) => Boolean(value?.trim?.()))) {
+          requiredText(input.parentName, 'Parent name')
+          requiredText(input.parentEmail, 'Parent email')
+          validatePassword(input.parentPassword, 'Parent initial password')
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.parentEmail.trim())) {
+            throw new Error('Enter a valid parent email address.')
+          }
+        }
+      } else {
+        requiredText(input.employeeCode, 'Employee code')
+        requiredText(input.subject, 'Subject')
+      }
     }
   } catch (error) {
     return response({ error: error instanceof Error ? error.message : 'Invalid account details.' }, 400)
@@ -105,6 +115,34 @@ Deno.serve(async (request) => {
     .maybeSingle()
   if (callerError) return response({ error: callerError.message }, 500)
   if (caller?.role !== 'admin') return response({ error: 'Administrator access is required.' }, 403)
+
+  if (input.action === 'update_teacher_password') {
+    const teacherId = requiredText(input.teacherId, 'Teacher')
+    const { data: teacher, error: teacherError } = await adminClient
+      .from('teachers')
+      .select('user_id')
+      .eq('id', teacherId)
+      .maybeSingle()
+    if (teacherError) return response({ error: teacherError.message }, 500)
+    if (!teacher) return response({ error: 'Teacher record was not found.' }, 404)
+
+    const { data: profile, error: profileError } = await adminClient
+      .from('users')
+      .select('auth_user_id, role')
+      .eq('id', teacher.user_id)
+      .maybeSingle()
+    if (profileError) return response({ error: profileError.message }, 500)
+    if (profile?.role !== 'teacher' || !profile.auth_user_id) {
+      return response({ error: 'Teacher does not have a linked Auth account.' }, 400)
+    }
+
+    const { error: passwordError } = await adminClient.auth.admin.updateUserById(
+      profile.auth_user_id,
+      { password: input.password }
+    )
+    if (passwordError) return response({ error: passwordError.message }, 400)
+    return response({ success: true })
+  }
 
   const createdAuthIds: string[] = []
   const createdProfileIds: string[] = []

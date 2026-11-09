@@ -70,7 +70,10 @@ Student enrollment creates a `public.users` profile and a linked
 creates the teacher's `public.users` profile and linked `public.teachers`
 record, then registers the Auth account through Supabase Auth. The Auth signup
 client does not persist its session, so it does not replace the administrator's
-session. Never store passwords in public database tables.
+session. Editing a teacher password uses the admin-authorized
+`manage-accounts` Edge Function, which must be deployed with the Supabase CLI
+and configured with the server-side service-role key. Never store passwords in
+public database tables.
 
 The parent dashboard shows only students explicitly linked through
 `students.parent_id`. Teacher, student, and parent portals are read-only; RLS
