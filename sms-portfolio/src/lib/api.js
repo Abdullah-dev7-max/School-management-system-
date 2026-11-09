@@ -36,6 +36,75 @@ export async function fetchInstituteSettings() {
   return data ?? { school_name: '', address: '', contact_email: '', academic_year: '' }
 }
 
+export async function fetchRoleDashboard(profile) {
+  if (profile.role === 'teacher') {
+    const teacher = unwrap(
+      await supabase.from('teachers').select('id, employee_code, subject').eq('user_id', profile.id).single()
+    )
+    const classes = unwrap(
+      await supabase
+        .from('classes')
+        .select('id, name, section, academic_year')
+        .eq('class_teacher_id', teacher.id)
+        .order('name')
+        .order('section')
+    )
+    const classIds = classes.map((item) => item.id)
+    const students = classIds.length
+      ? unwrap(
+          await supabase
+            .from('students')
+            .select('id, admission_no, roll_no, class_id, student:users!user_id(full_name)')
+            .in('class_id', classIds)
+            .eq('status', 'active')
+            .order('admission_no')
+        )
+      : []
+    const studentIds = students.map((student) => student.id)
+    const [attendance, marks] = studentIds.length
+      ? await Promise.all([
+          supabase.from('attendance').select('student_id, attended_on, status').in('student_id', studentIds).order('attended_on', { ascending: false }).limit(20),
+          supabase.from('marks').select('student_id, subject, exam, score, max_score, exam_date').in('student_id', studentIds).order('exam_date', { ascending: false }).limit(20),
+        ])
+      : [{ data: [], error: null }, { data: [], error: null }]
+    return {
+      role: profile.role,
+      teacher,
+      classes,
+      students,
+      attendance: unwrap(attendance),
+      marks: unwrap(marks),
+    }
+  }
+
+  if (profile.role === 'student' || profile.role === 'parent') {
+    const students = unwrap(
+      await supabase
+        .from('students')
+        .select('id, user_id, parent_id, admission_no, roll_no, status, student:users!user_id(full_name), classes(id, name, section, academic_year)')
+        .eq(profile.role === 'student' ? 'user_id' : 'parent_id', profile.id)
+        .order('admission_no')
+    )
+    const studentIds = students.map((student) => student.id)
+    const [fees, attendance, marks] = studentIds.length
+      ? await Promise.all([
+          supabase.from('fees').select('id, student_id, title, amount, amount_paid, due_date, status').in('student_id', studentIds).order('due_date', { ascending: false }),
+          supabase.from('attendance').select('student_id, attended_on, status').in('student_id', studentIds).order('attended_on', { ascending: false }).limit(30),
+          supabase.from('marks').select('student_id, subject, exam, score, max_score, exam_date').in('student_id', studentIds).order('exam_date', { ascending: false }).limit(30),
+        ])
+      : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }]
+    return {
+      role: profile.role,
+      students,
+      fees: unwrap(fees),
+      attendance: unwrap(attendance),
+      marks: unwrap(marks),
+    }
+  }
+
+  throw new Error('This account role does not have a dashboard.')
+}
+
 export async function saveInstituteSettings(settings) {
   unwrap(await supabase.from('institute_settings').upsert({
     id: true,

@@ -9,4 +9,35 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+const rememberKey = 'scholara.auth.remember'
+const projectRef = new URL(supabaseUrl).hostname.split('.')[0]
+const storageKey = `sb-${projectRef}-auth-token`
+const browserStorage = {
+  getItem(key) {
+    const remember = window.localStorage.getItem(rememberKey)
+    if (remember === 'false') return window.sessionStorage.getItem(key)
+    return window.localStorage.getItem(key) ?? window.sessionStorage.getItem(key)
+  },
+  setItem(key, value) {
+    window.localStorage.removeItem(key)
+    window.sessionStorage.removeItem(key)
+    if (window.localStorage.getItem(rememberKey) === 'false') {
+      window.sessionStorage.setItem(key, value)
+    } else {
+      window.localStorage.setItem(key, value)
+    }
+  },
+  removeItem(key) {
+    window.localStorage.removeItem(key)
+    window.sessionStorage.removeItem(key)
+  },
+}
+
+export function setRememberSession(remember) {
+  window.localStorage.setItem(rememberKey, remember ? 'true' : 'false')
+  browserStorage.removeItem(storageKey)
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: { storage: browserStorage, storageKey, persistSession: true },
+})

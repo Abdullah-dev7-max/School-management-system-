@@ -105,7 +105,7 @@ function NavItem({ to, label, icon: Icon, collapsed, pillId, onNavigate }) {
 }
 
 function ProfileCard({ collapsed, onNavigate }) {
-  const { profile, accent } = useRole()
+  const { profile, accent, role } = useRole()
 
   return (
     <div className="shrink-0 p-3">
@@ -130,14 +130,16 @@ function ProfileCard({ collapsed, onNavigate }) {
                 <p className="truncate text-sm font-semibold text-white">{profile.full_name}</p>
                 <p className="truncate text-xs text-white/45">{profile.email}</p>
               </div>
-              <NavLink
-                to="/settings"
-                onClick={onNavigate}
-                aria-label="Settings"
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white/50 outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-lilac-300/80"
-              >
-                <Settings className="h-4 w-4" />
-              </NavLink>
+              {role === 'admin' && (
+                <NavLink
+                  to="/settings"
+                  onClick={onNavigate}
+                  aria-label="Settings"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white/50 outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-lilac-300/80"
+                >
+                  <Settings className="h-4 w-4" />
+                </NavLink>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

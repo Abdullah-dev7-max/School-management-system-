@@ -1,7 +1,10 @@
 import { useState } from 'react'
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import Layout from './components/layout/Layout.jsx'
 import Dashboard from './pages/Dashboard.jsx'
+import Login from './pages/Login.jsx'
+import RoleDashboard from './pages/RoleDashboard.jsx'
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx'
 import Students from './pages/admin/Students.jsx'
 import Teachers from './pages/Teachers.jsx'
 import Classes from './pages/Classes.jsx'
@@ -10,14 +13,28 @@ import Fees from './pages/Fees.jsx'
 import Marks from './pages/Marks.jsx'
 import Settings from './pages/Settings.jsx'
 import Placeholder from './pages/Placeholder.jsx'
-import AuthPage from './pages/AuthPage.jsx'
 import { useRole } from './context/RoleContext.jsx'
 import { LogOut } from 'lucide-react'
+
+const roleHome = {
+  admin: '/admin',
+  teacher: '/teacher',
+  student: '/student',
+  parent: '/parent',
+}
+
+function RequireRole({ role, children }) {
+  const { profile } = useRole()
+  if (profile.role !== role) return <Navigate to={roleHome[profile.role] ?? '/login'} replace />
+  return children ?? <Outlet />
+}
 
 export default function App() {
   const { initialized, profileLoading, profile, profileError, session, signOut } = useRole()
   const [signOutError, setSignOutError] = useState('')
+  const location = useLocation()
 
+  if (location.pathname === '/reset-password' && initialized) return <ResetPasswordPage />
   if (!initialized || profileLoading || (session?.user && !profile && !profileError)) {
     return <main className="grid min-h-screen place-items-center text-sm text-ink/60">Loading secure session…</main>
   }
@@ -25,7 +42,7 @@ export default function App() {
     return (
       <main className="grid min-h-screen place-items-center p-4">
         <div role="alert" className="max-w-lg rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800">
-          <p className="font-semibold">Could not verify the administrator account</p>
+          <p className="font-semibold">Could not verify this institute account</p>
           <p className="mt-2">{profileError.message}</p>
           {signOutError && <p className="mt-2">{signOutError}</p>}
           <button type="button" onClick={async () => {
@@ -42,22 +59,32 @@ export default function App() {
       </main>
     )
   }
-  if (!profile) return <AuthPage />
+  if (!profile) return <Login />
 
   return (
     <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="students" element={<Students />} />
-        <Route path="teachers" element={<Teachers />} />
-        <Route path="classes" element={<Classes />} />
-        <Route path="attendance" element={<Attendance />} />
-        <Route path="fees" element={<Fees />} />
-        <Route path="marks" element={<Marks />} />
-        <Route path="settings" element={<Settings />} />
-        <Route path="*" element={<Placeholder />} />
+      <Route element={<RequireRole role="admin" />}>
+        <Route element={<Layout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="admin" element={<Dashboard />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="students" element={<Students />} />
+          <Route path="teachers" element={<Teachers />} />
+          <Route path="classes" element={<Classes />} />
+          <Route path="attendance" element={<Attendance />} />
+          <Route path="fees" element={<Fees />} />
+          <Route path="marks" element={<Marks />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="*" element={<Placeholder />} />
+        </Route>
       </Route>
+      {['teacher', 'student', 'parent'].map((role) => (
+        <Route key={role} path={role} element={<RequireRole role={role}><Layout /></RequireRole>}>
+          <Route index element={<RoleDashboard />} />
+        </Route>
+      ))}
+      <Route path="login" element={<Navigate to={roleHome[profile.role] ?? '/'} replace />} />
+      <Route path="*" element={<Navigate to={roleHome[profile.role] ?? '/'} replace />} />
     </Routes>
   )
 }

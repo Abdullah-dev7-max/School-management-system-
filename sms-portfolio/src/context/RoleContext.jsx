@@ -9,8 +9,6 @@ export function RoleProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [profileLoading, setProfileLoading] = useState(false)
   const [profileError, setProfileError] = useState(null)
-  const [signupOpen, setSignupOpen] = useState(false)
-  const [signupStatusError, setSignupStatusError] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -55,9 +53,6 @@ export function RoleProvider({ children }) {
         if (error) {
           setProfile(null)
           setProfileError(error)
-        } else if (data.role !== 'admin') {
-          setProfile(null)
-          setProfileError(new Error('This account is not authorized to administer the institute.'))
         } else {
           setProfile(data)
           setProfileError(null)
@@ -73,38 +68,6 @@ export function RoleProvider({ children }) {
 
     return () => { active = false }
   }, [session?.user?.id])
-
-  useEffect(() => {
-    if (!initialized || session) return
-    let active = true
-    supabase.rpc('admin_signup_open').then(({ data, error }) => {
-      if (!active) return
-      if (error) setSignupStatusError(error)
-      else setSignupOpen(Boolean(data))
-    }).catch((error) => {
-      if (active) setSignupStatusError(error)
-    })
-    return () => { active = false }
-  }, [initialized, session])
-
-  const signIn = useCallback(async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
-  }, [])
-
-  const signUp = useCallback(async (fullName, email, password) => {
-    if (!signupOpen) throw new Error('Initial administrator signup is not available.')
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName.trim() },
-        emailRedirectTo: window.location.origin,
-      },
-    })
-    if (error) throw error
-    setSignupOpen(false)
-  }, [signupOpen])
 
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut()
@@ -124,9 +87,9 @@ export function RoleProvider({ children }) {
   }, [session?.user])
 
   const value = useMemo(() => {
-    const current = ROLES.admin
+    const current = ROLES[profile?.role] ?? ROLES.admin
     return {
-      role: 'admin',
+      role: profile?.role ?? 'admin',
       roles: ROLES,
       profile,
       nav: current.nav,
@@ -135,14 +98,10 @@ export function RoleProvider({ children }) {
       initialized,
       profileLoading,
       profileError,
-      signupOpen,
-      signupStatusError,
-      signIn,
-      signUp,
       signOut,
       updateProfileName,
     }
-  }, [profile, session, initialized, profileLoading, profileError, signupOpen, signupStatusError, signIn, signUp, signOut, updateProfileName])
+  }, [profile, session, initialized, profileLoading, profileError, signOut, updateProfileName])
 
   return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>
 }

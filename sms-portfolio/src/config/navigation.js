@@ -18,11 +18,11 @@ export const ROLES = {
   admin: {
     id: 'admin',
     label: 'Admin',
-    description: 'Run the whole school',
+    description: 'Run the whole institute',
     icon: ShieldCheck,
     accent: 'from-lilac-500 to-fuchsia-400',
     nav: [
-      { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+      { to: '/admin', label: 'Dashboard', icon: LayoutDashboard },
       { to: '/students', label: 'Students', icon: Users },
       { to: '/teachers', label: 'Teachers', icon: GraduationCap },
       { to: '/classes', label: 'Classes', icon: School },
@@ -31,6 +31,30 @@ export const ROLES = {
       { to: '/marks', label: 'Marks', icon: Award },
       { to: '/settings', label: 'Settings', icon: Settings },
     ],
+  },
+  teacher: {
+    id: 'teacher',
+    label: 'Teacher',
+    description: 'View your classes and student records',
+    icon: GraduationCap,
+    accent: 'from-sky-500 to-lilac-400',
+    nav: [{ to: '/teacher', label: 'Dashboard', icon: LayoutDashboard }],
+  },
+  student: {
+    id: 'student',
+    label: 'Student',
+    description: 'View your academic and attendance records',
+    icon: Award,
+    accent: 'from-emerald-500 to-sky-400',
+    nav: [{ to: '/student', label: 'Dashboard', icon: LayoutDashboard }],
+  },
+  parent: {
+    id: 'parent',
+    label: 'Parent',
+    description: 'View linked student records',
+    icon: Users,
+    accent: 'from-fuchsia-500 to-pink-400',
+    nav: [{ to: '/parent', label: 'Dashboard', icon: LayoutDashboard }],
   },
 }
 

@@ -27,10 +27,11 @@ In Supabase **SQL Editor**, run these scripts in order:
 3. `database/students_crud_migration.sql`
 4. `database/management_pages_migration.sql`
 5. `database/production_security_migration.sql`
+6. `database/multirole_auth_migration.sql`
 
-These scripts are safe to rerun and do not reset existing tables. The last
-migration removes only the former application's known deterministic sample
-accounts, their dependent records, and its sample notices.
+These scripts are safe to rerun and do not reset existing tables. The
+production security migration removes only the former application's known
+deterministic sample accounts, their dependent records, and sample notices.
 
 ### Initial administrator account
 
@@ -44,20 +45,49 @@ on conflict (id) do update set email = excluded.email;
 ```
 
 Enable email/password sign-in and email confirmation in Supabase
-**Authentication → Providers**. The app exposes initial signup only while the
-allowlist is populated. A database trigger accepts only that exact email,
-creates its admin profile, and consumes the allowlist entry. Subsequent public
-signups are rejected by the database trigger. The signup form also requires a
-12-character password; configure Supabase Auth's password policy and rate
-limits to enforce the institute's deployment requirements.
+**Authentication → Providers**. Login uses Supabase Auth directly. Initial
+administrator setup is authorized by the database trigger only when the email
+matches the allowlist; the trigger creates the admin profile and consumes that
+entry.
+Configure Supabase Auth's password policy and rate limits to enforce the
+institute's deployment requirements.
+Add the deployed site's `/reset-password` URL to the Supabase Auth redirect URL
+allowlist so password recovery returns to the password update form.
 
-For an existing database, back it up first, confirm that the first four schema
-scripts have been applied, and then run
-`database/production_security_migration.sql`. This migration removes the known
-former demo seed records and replaces the old anonymous policies with
-authenticated admin-only policies. A deployment already containing a real
-Supabase Auth administrator should link that account to its `public.users`
-profile before using the app rather than bootstrapping a second admin.
+For an existing database, back it up first, confirm that the first five schema
+scripts have been applied, and then run `database/multirole_auth_migration.sql`.
+The migrations replace broad anonymous access with authenticated, role-limited
+policies. A deployment that already has an administrator should link that Auth
+account to its `public.users` profile before trying the initial admin setup.
+
+### Staff, student, and parent accounts
+
+The Admin first creates teacher and student records in the application. In
+Supabase **Authentication → Users**, add the corresponding Auth user with the
+same email as the existing `public.users` profile. The database trigger links
+the new Auth identity to that pre-existing profile. Keep email confirmation
+enabled so a person cannot claim another user's pre-created email address.
+Repeat this for each teacher and student who needs portal access.
+For an Auth identity that already exists, link it directly by setting that
+profile's `auth_user_id` to the corresponding `auth.users.id` in SQL Editor.
+
+There is no parent-enrollment form yet. Create a parent profile and link the
+student record in SQL Editor before adding the matching Auth user:
+
+```sql
+insert into public.users (full_name, email, role)
+values ('Parent Name', 'parent@example.org', 'parent')
+returning id;
+
+update public.students
+set parent_id = '<returned-parent-profile-id>'
+where admission_no = '<student-admission-number>';
+```
+
+Then add the Auth user in Supabase with the same parent email. The parent
+dashboard will show only students explicitly linked through `parent_id`.
+Teacher, student, and parent portals are read-only; RLS limits each portal to
+the user's assigned classes, own student record, or linked children.
 
 Run the app:
 
@@ -74,9 +104,10 @@ npm run preview
 
 ## Institute operations
 
-- Dashboard (`/` and `/dashboard`): live counts, attendance, fee balances,
-  revenue, and student records from Supabase. The compact greeting uses the
-  authenticated administrator's database name and the current local date/time.
+- Admin dashboard (`/admin`, `/`, and `/dashboard`): live counts, attendance,
+  fee balances, revenue, and student records from Supabase. The compact greeting
+  uses the authenticated administrator's database name and current local
+  date/time.
 - Students (`/students`): create, view, update, and delete student records,
   including class/section assignment.
 - Teachers (`/teachers`): create, view, update, and delete staff records.
@@ -97,11 +128,9 @@ by the production migration.
 ## Security and scope
 
 - All institute data tables use row-level security. Anonymous access is
-  revoked; authenticated operations require the linked administrator profile.
-  The database policy is the security boundary, not the UI.
-- The role switcher and unauthenticated teacher/student/parent portals have been
-  removed. Student and teacher contact records created by the admin are not
-  Supabase Auth accounts.
+  revoked; authenticated access is scoped to the linked administrator,
+  teacher's assigned classes, student's own records, or parent's linked
+  children. The database policy is the security boundary, not the UI.
 - Use a separate Supabase project per institute. This schema is single-institute
   and does not provide tenant isolation for multiple schools in one database.
 - Configure Supabase Auth email confirmation, password policy, rate limiting,
