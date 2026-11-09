@@ -2,28 +2,24 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { supabase } from '../lib/supabaseClient.js'
 import { ROLES } from '../config/navigation.js'
 const RoleContext = createContext(null)
+const profileRequests = new Map()
 
 async function fetchUserProfile(user) {
-  const columns = 'id, auth_user_id, full_name, email, role'
-  const linked = await supabase
-    .from('users')
-    .select(columns)
-    .eq('auth_user_id', user.id)
-    .maybeSingle()
-  if (linked.error) throw linked.error
-  if (linked.data) return linked.data
-
-  if (user.email) {
-    const byEmail = await supabase
-      .from('users')
-      .select(columns)
-      .ilike('email', user.email)
-      .maybeSingle()
-    if (byEmail.error) throw byEmail.error
-    if (byEmail.data?.auth_user_id === user.id) return byEmail.data
+  if (!profileRequests.has(user.id)) {
+    const request = supabase.rpc('resolve_current_profile').then(({ data, error }) => {
+      if (error) {
+        throw new Error(
+          `${error.message}. Make sure database/login_profile_link_migration.sql has been run in Supabase.`
+        )
+      }
+      if (!data || data.auth_user_id !== user.id) {
+        throw new Error('Your sign-in is not linked to an institute profile. Ask your administrator to verify your account.')
+      }
+      return data
+    }).finally(() => profileRequests.delete(user.id))
+    profileRequests.set(user.id, request)
   }
-
-  throw new Error('Your sign-in is not linked to an institute profile. Ask your administrator to link this Auth account to your profile.')
+  return profileRequests.get(user.id)
 }
 
 export function RoleProvider({ children }) {
@@ -115,10 +111,6 @@ export function RoleProvider({ children }) {
     } catch (profileLoadError) {
       setProfile(null)
       setProfileError(profileLoadError)
-      const { error: signOutError } = await supabase.auth.signOut()
-      if (signOutError) {
-        throw new Error(`${profileLoadError.message} Sign-out also failed: ${signOutError.message}`)
-      }
       throw profileLoadError
     } finally {
       setProfileLoading(false)

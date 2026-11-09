@@ -28,6 +28,7 @@ In Supabase **SQL Editor**, run these scripts in order:
 4. `database/management_pages_migration.sql`
 5. `database/production_security_migration.sql`
 6. `database/multirole_auth_migration.sql`
+7. `database/login_profile_link_migration.sql`
 
 These scripts are safe to rerun and do not reset existing tables. The
 production security migration removes only the former application's known
@@ -57,19 +58,16 @@ allowlist so password recovery returns to the password update form.
 For an existing database, back it up first, confirm that the first five schema
 scripts have been applied, and then run `database/multirole_auth_migration.sql`.
 The migrations replace broad anonymous access with authenticated, role-limited
-policies. A deployment that already has an administrator should link that Auth
-account to its `public.users` profile before trying the initial admin setup.
+policies. The login profile migration links an existing institute profile to a
+Supabase Auth account when their email matches and Supabase confirms the email.
 
 ### Staff, student, and parent accounts
 
 The Admin first creates teacher and student records in the application. In
 Supabase **Authentication → Users**, add the corresponding Auth user with the
-same email as the existing `public.users` profile. The database trigger links
-the new Auth identity to that pre-existing profile. Keep email confirmation
-enabled so a person cannot claim another user's pre-created email address.
+same email as the existing `public.users` profile. After the user confirms
+their email and signs in, the login profile migration links the matching record.
 Repeat this for each teacher and student who needs portal access.
-For an Auth identity that already exists, link it directly by setting that
-profile's `auth_user_id` to the corresponding `auth.users.id` in SQL Editor.
 
 There is no parent-enrollment form yet. Create a parent profile and link the
 student record in SQL Editor before adding the matching Auth user:
