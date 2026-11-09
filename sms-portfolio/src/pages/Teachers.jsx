@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Plus, Search, Trash2, UserRoundPen, X } from 'lucide-react'
 import { useAsync } from '../hooks/useAsync.js'
 import { createTeacher, deleteTeacher, fetchTeachersPage, updateTeacher } from '../lib/api.js'
@@ -85,7 +85,14 @@ export default function Teachers() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
   const teachers = teachersQuery.data ?? []
+
+  useEffect(() => {
+    if (!successMessage) return undefined
+    const timeout = window.setTimeout(() => setSuccessMessage(''), 4000)
+    return () => window.clearTimeout(timeout)
+  }, [successMessage])
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase()
@@ -106,6 +113,7 @@ export default function Teachers() {
     else await createTeacher(values)
     setDialogOpen(false)
     setEditing(null)
+    setSuccessMessage(editing ? 'Teacher updated successfully.' : 'Teacher added successfully.')
     await teachersQuery.reload()
   }
 
@@ -129,6 +137,7 @@ export default function Teachers() {
   return (
     <div className="space-y-5">
       {error && <div role="alert" className="flex justify-between rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}<button type="button" onClick={() => setError('')} aria-label="Dismiss"><X className="h-4 w-4" /></button></div>}
+      {successMessage && <div role="status" className="fixed right-5 top-5 z-[70] rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 shadow-lg">{successMessage}</div>}
       <GlassCard className="p-5 sm:p-6">
         <SectionHeader
           title="Teachers"
