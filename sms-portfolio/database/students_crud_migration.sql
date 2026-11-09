@@ -1,7 +1,6 @@
--- Students page migration for the no-login demo only.
+-- Students page schema migration.
 -- Run after schema.sql and step2_migration.sql.
--- Adds a status field and enables anonymous demo CRUD for student profiles.
--- Do not use these broad policies with real student data.
+-- Access policies are installed by production_security_migration.sql.
 
 alter table public.students
   add column if not exists status text not null default 'active';
@@ -19,17 +18,3 @@ begin
       check (status in ('active', 'inactive', 'withdrawn'));
   end if;
 end $$;
-
-drop policy if exists "demo insert users" on public.users;
-drop policy if exists "demo update users" on public.users;
-drop policy if exists "demo delete users" on public.users;
-create policy "demo insert users" on public.users for insert to anon with check (true);
-create policy "demo update users" on public.users for update to anon using (true) with check (true);
-create policy "demo delete users" on public.users for delete to anon using (true);
-
-drop policy if exists "demo insert students" on public.students;
-drop policy if exists "demo update students" on public.students;
-drop policy if exists "demo delete students" on public.students;
-create policy "demo insert students" on public.students for insert to anon with check (true);
-create policy "demo update students" on public.students for update to anon using (true) with check (true);
-create policy "demo delete students" on public.students for delete to anon using (true);

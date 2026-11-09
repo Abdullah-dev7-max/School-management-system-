@@ -16,7 +16,7 @@ export async function fetchAdminOverview() {
   const [students, teachers, fees, attendance] = await Promise.all([
     supabase.from('students').select('id', { count: 'exact', head: true }),
     supabase.from('teachers').select('id', { count: 'exact', head: true }),
-    supabase.from('fees').select('id, student_id, title, amount, amount_paid, due_date, paid_on, status'),
+    supabase.from('fees').select('id, student_id, title, amount, amount_paid, due_date, paid_on, status, fee_payments(amount, paid_on)'),
     supabase.from('attendance').select('student_id, attended_on, status').gte('attended_on', since).order('attended_on'),
   ])
   if (students.error) throw new Error(students.error.message)
@@ -28,6 +28,22 @@ export async function fetchAdminOverview() {
     fees: unwrap(fees),
     attendance: unwrap(attendance),
   }
+}
+
+export async function fetchInstituteSettings() {
+  const { data, error } = await supabase.from('institute_settings').select('school_name, address, contact_email, academic_year').eq('id', true).maybeSingle()
+  if (error) throw new Error(error.message)
+  return data ?? { school_name: '', address: '', contact_email: '', academic_year: '' }
+}
+
+export async function saveInstituteSettings(settings) {
+  unwrap(await supabase.from('institute_settings').upsert({
+    id: true,
+    school_name: settings.schoolName.trim(),
+    address: settings.address.trim() || null,
+    contact_email: settings.contactEmail.trim(),
+    academic_year: settings.academicYear.trim(),
+  }, { onConflict: 'id' }))
 }
 
 export async function fetchStudentDirectory() {
@@ -225,6 +241,20 @@ export async function createClass({ name, section, room, academicYear, classTeac
   )
 }
 
+export async function updateClass(classId, { name, section, room, academicYear, classTeacherId }) {
+  unwrap(await supabase.from('classes').update({
+    name,
+    section,
+    room: room || null,
+    academic_year: academicYear,
+    class_teacher_id: classTeacherId || null,
+  }).eq('id', classId))
+}
+
+export async function deleteClass(classId) {
+  unwrap(await supabase.from('classes').delete().eq('id', classId))
+}
+
 export async function fetchAttendancePage(classId, date) {
   const classes = unwrap(await supabase.from('classes').select('id, name, section').order('name').order('section'))
   if (!classId) return { classes, roster: [] }
@@ -253,7 +283,7 @@ export async function fetchAttendancePage(classId, date) {
       rollNo: student.roll_no,
       admissionNo: student.admission_no,
       name: student.student?.full_name ?? 'Unknown student',
-      status: records.find((record) => record.student_id === student.id)?.status ?? 'present',
+      status: records.find((record) => record.student_id === student.id)?.status ?? '',
     })),
   }
 }
@@ -262,7 +292,7 @@ export async function fetchFeesPage() {
   const [feeResult, studentResult] = await Promise.all([
     supabase
       .from('fees')
-      .select('id, student_id, title, amount, amount_paid, due_date, paid_on, status')
+      .select('id, student_id, title, amount, amount_paid, due_date, paid_on, status, fee_payments(id, amount, paid_on)')
       .order('due_date', { ascending: true }),
     supabase.from('students').select('id, user_id, admission_no'),
   ])
@@ -282,18 +312,35 @@ export async function fetchFeesPage() {
       },
     ])
   )
-  return fees.map((fee) => ({ ...fee, student: studentById[fee.student_id] ?? null }))
+  return {
+    fees: fees.map((fee) => ({ ...fee, student: studentById[fee.student_id] ?? null })),
+    students: students.map((student) => ({
+      id: student.id,
+      admission_no: student.admission_no,
+      name: studentById[student.id]?.name ?? 'Unknown student',
+    })),
+  }
+}
+
+export async function issueFeeVoucher({ studentId, title, amount, dueDate }) {
+  const value = Number(amount)
+  if (!Number.isFinite(value) || value <= 0) throw new Error('Fee amount must be greater than zero.')
+  unwrap(await supabase.from('fees').insert({
+    student_id: studentId,
+    title: title.trim(),
+    amount: value,
+    amount_paid: 0,
+    due_date: dueDate,
+    status: 'pending',
+  }))
 }
 
 export async function recordFeePayment(fee, paymentAmount, paidOn) {
-  const amountPaid = Number(fee.amount_paid) + paymentAmount
-  const status = amountPaid >= Number(fee.amount) ? 'paid' : 'partial'
-  unwrap(
-    await supabase
-      .from('fees')
-      .update({ amount_paid: amountPaid, status, paid_on: paidOn })
-      .eq('id', fee.id)
-  )
+  unwrap(await supabase.rpc('record_fee_payment', {
+    p_fee_id: fee.id,
+    p_amount: paymentAmount,
+    p_paid_on: paidOn,
+  }))
 }
 
 export async function fetchMarksPage(classId, subject, exam) {
@@ -312,7 +359,7 @@ export async function fetchMarksPage(classId, subject, exam) {
     ? unwrap(
         await supabase
           .from('marks')
-          .select('student_id, score, max_score')
+          .select('student_id, score, max_score, exam_date')
           .eq('subject', subject)
           .eq('exam', exam)
           .in('student_id', ids)
@@ -326,7 +373,8 @@ export async function fetchMarksPage(classId, subject, exam) {
       admissionNo: student.admission_no,
       name: student.student?.full_name ?? 'Unknown student',
       score: records.find((record) => record.student_id === student.id)?.score ?? '',
-      maxScore: records.find((record) => record.student_id === student.id)?.max_score ?? 100,
+      maxScore: records.find((record) => record.student_id === student.id)?.max_score ?? '',
+      examDate: records.find((record) => record.student_id === student.id)?.exam_date ?? '',
     })),
   }
 }
@@ -335,85 +383,6 @@ export async function saveClassMarks(rows) {
   if (rows.length) unwrap(await supabase.from('marks').upsert(rows, { onConflict: 'student_id,subject,exam' }))
 }
 
-/* ----------------------------- Teacher ----------------------------- */
-
-export async function fetchRoster(classId) {
-  const rows = unwrap(
-    await supabase
-      .from('students')
-      .select('id, roll_no, student:users!user_id(full_name)')
-      .eq('class_id', classId)
-      .order('roll_no')
-  )
-  return rows.map((r) => ({ id: r.id, rollNo: r.roll_no, name: r.student?.full_name ?? 'Unknown' }))
-}
-
-export async function fetchAttendanceSheet(classId, date) {
-  const roster = await fetchRoster(classId)
-  const ids = roster.map((s) => s.id)
-  const existing = ids.length
-    ? unwrap(await supabase.from('attendance').select('student_id, status').eq('attended_on', date).in('student_id', ids))
-    : []
-  return { roster, existing: Object.fromEntries(existing.map((r) => [r.student_id, r.status])) }
-}
-
 export async function saveAttendance(rows) {
   unwrap(await supabase.from('attendance').upsert(rows, { onConflict: 'student_id,attended_on' }))
-}
-
-export async function fetchMarksSheet(classId, subject, exam) {
-  const roster = await fetchRoster(classId)
-  const ids = roster.map((s) => s.id)
-  const existing = ids.length
-    ? unwrap(
-        await supabase
-          .from('marks')
-          .select('student_id, score, max_score')
-          .eq('subject', subject)
-          .eq('exam', exam)
-          .in('student_id', ids)
-      )
-    : []
-  return {
-    roster,
-    scores: Object.fromEntries(existing.map((r) => [r.student_id, String(Number(r.score))])),
-    maxScore: existing.length ? Number(existing[0].max_score) : null,
-  }
-}
-
-export async function saveMarks(rows) {
-  unwrap(await supabase.from('marks').upsert(rows, { onConflict: 'student_id,subject,exam' }))
-}
-
-export async function fetchTimetable(teacherId) {
-  return unwrap(
-    await supabase
-      .from('timetable_slots')
-      .select('id, day_of_week, period, starts_at, ends_at, subject, room, classes(name, section)')
-      .eq('teacher_id', teacherId)
-      .order('day_of_week')
-      .order('period')
-  )
-}
-
-export async function fetchFees(studentId) {
-  return unwrap(
-    await supabase
-      .from('fees')
-      .select('id, title, amount, amount_paid, due_date, paid_on, status')
-      .eq('student_id', studentId)
-      .order('due_date', { ascending: false })
-  )
-}
-
-export async function fetchNotices(audience) {
-  return unwrap(
-    await supabase
-      .from('notices')
-      .select('id, title, body, category, pinned, published_at')
-      .overlaps('audience', ['all', audience])
-      .order('pinned', { ascending: false })
-      .order('published_at', { ascending: false })
-      .limit(8)
-  )
 }

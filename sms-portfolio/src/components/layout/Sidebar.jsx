@@ -105,7 +105,7 @@ function NavItem({ to, label, icon: Icon, collapsed, pillId, onNavigate }) {
 }
 
 function ProfileCard({ collapsed, onNavigate }) {
-  const { profile, accent, role, roles } = useRole()
+  const { profile, accent } = useRole()
 
   return (
     <div className="shrink-0 p-3">
@@ -114,12 +114,12 @@ function ProfileCard({ collapsed, onNavigate }) {
           collapsed ? 'justify-center' : 'gap-3'
         }`}
       >
-        <Avatar initials={profile.initials} accent={accent} online />
+        <Avatar initials={profile.full_name.split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()} accent={accent} online />
 
         <AnimatePresence initial={false} mode="wait">
           {!collapsed && (
             <motion.div
-              key={role}
+              key={profile.auth_user_id}
               className="flex min-w-0 flex-1 items-center gap-2"
               initial={{ opacity: 0, x: -6 }}
               animate={{ opacity: 1, x: 0 }}
@@ -127,8 +127,8 @@ function ProfileCard({ collapsed, onNavigate }) {
               transition={{ duration: 0.16 }}
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-white">{profile.name || roles[role].label}</p>
-                <p className="truncate text-xs text-white/45">{profile.title}</p>
+                <p className="truncate text-sm font-semibold text-white">{profile.full_name}</p>
+                <p className="truncate text-xs text-white/45">{profile.email}</p>
               </div>
               <NavLink
                 to="/settings"

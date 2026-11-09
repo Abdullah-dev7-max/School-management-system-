@@ -49,10 +49,10 @@ function AdminContent({ overview, directory }) {
     <>
       <motion.div variants={grid} initial="hidden" animate="show" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <motion.div variants={cell}>
-          <StatCard icon={Users} label="Total students" value={studentCount} hint="Enrolled this academic year" accent="from-lilac-500 to-lilac-300" />
+          <StatCard icon={Users} label="Total students" value={studentCount} hint="All student records" accent="from-lilac-500 to-lilac-300" />
         </motion.div>
         <motion.div variants={cell}>
-          <StatCard icon={GraduationCap} label="Teachers" value={teacherCount} hint="Active teaching staff" accent="from-lilac-500 to-sky-400" />
+          <StatCard icon={GraduationCap} label="Teachers" value={teacherCount} hint="All staff records" accent="from-lilac-500 to-sky-400" />
         </motion.div>
         <motion.div variants={cell}>
           <StatCard icon={Wallet} label="Fees collected" value={pkrCompact(collected)} hint={`${pkrCompact(outstanding)} still outstanding`} accent="from-lilac-500 to-fuchsia-400" />
@@ -73,8 +73,8 @@ function AdminContent({ overview, directory }) {
 }
 
 export default function AdminDashboard() {
-  const overview = useAsync(fetchAdminOverview, [])
-  const directory = useAsync(fetchStudentDirectory, [])
+  const overview = useAsync(fetchAdminOverview, [], ['students', 'teachers', 'fees', 'attendance'])
+  const directory = useAsync(fetchStudentDirectory, [], ['students', 'users', 'classes'])
 
   const error = overview.error ?? directory.error
   if (error) {

@@ -1,14 +1,15 @@
-import { Bell, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react'
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useRole } from '../../context/RoleContext.jsx'
-import RoleSwitcher from './RoleSwitcher.jsx'
 
 const iconButton =
   'grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-ink/70 outline-none transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-lilac-500/60'
 
 export default function Header({ collapsed, onToggleSidebar, onOpenMobile }) {
-  const { nav } = useRole()
+  const { nav, profile, signOut } = useRole()
   const { pathname } = useLocation()
+  const [error, setError] = useState('')
   const title = nav.find((item) => item.to === pathname)?.label ?? 'Dashboard'
 
   return (
@@ -32,23 +33,19 @@ export default function Header({ collapsed, onToggleSidebar, onOpenMobile }) {
       <h1 className="min-w-0 truncate text-lg font-semibold tracking-tight">{title}</h1>
 
       <div className="ml-auto flex items-center gap-2.5 sm:gap-3">
-        <label className="glass hidden h-11 w-64 items-center gap-2.5 rounded-2xl px-3.5 text-ink/50 focus-within:ring-2 focus-within:ring-lilac-500/60 md:flex xl:w-80">
-          <Search className="h-4 w-4 shrink-0" />
-          <input
-            type="search"
-            placeholder="Search students, classes, fees"
-            aria-label="Search"
-            className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink/40"
-          />
-        </label>
-
-        <button type="button" aria-label="Notifications" className={`${iconButton} glass relative`}>
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-lilac-500 ring-2 ring-white" />
+        <span className="hidden max-w-48 truncate text-sm font-medium sm:block">{profile.full_name}</span>
+        <button type="button" aria-label="Sign out" title="Sign out" onClick={async () => {
+          try {
+            await signOut()
+            setError('')
+          } catch (signOutError) {
+            setError(signOutError.message)
+          }
+        }} className={`${iconButton} glass`}>
+          <LogOut className="h-5 w-5" />
         </button>
-
-        <RoleSwitcher />
       </div>
+      {error && <span role="alert" className="absolute right-4 top-full mt-1 rounded bg-rose-50 p-2 text-xs text-rose-700">{error}</span>}
     </header>
   )
 }

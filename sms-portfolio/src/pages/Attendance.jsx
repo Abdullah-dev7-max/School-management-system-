@@ -13,6 +13,7 @@ const OPTIONS = [
   { value: 'present', label: 'Present', active: 'bg-emerald-600 text-white' },
   { value: 'absent', label: 'Absent', active: 'bg-rose-600 text-white' },
   { value: 'late', label: 'Late', active: 'bg-amber-300 text-ink' },
+  { value: 'excused', label: 'Excused', active: 'bg-sky-600 text-white' },
 ]
 
 export default function Attendance() {
@@ -20,7 +21,7 @@ export default function Attendance() {
   const [date, setDate] = useState(toISODate())
   const [statuses, setStatuses] = useState({})
   const [saveState, setSaveState] = useState({ loading: false, message: '', error: '' })
-  const sheet = useAsync(() => fetchAttendancePage(classId, date), [classId, date])
+  const sheet = useAsync(() => fetchAttendancePage(classId, date), [classId, date], ['classes', 'students', 'users', 'attendance'])
   const classes = sheet.data?.classes ?? []
   const roster = sheet.data?.roster ?? []
 
@@ -36,11 +37,11 @@ export default function Attendance() {
 
   const counts = useMemo(() => roster.reduce(
     (result, student) => {
-      const state = statuses[student.id] ?? 'present'
-      result[state] += 1
+      const state = statuses[student.id]
+      if (state && result[state] != null) result[state] += 1
       return result
     },
-    { present: 0, absent: 0, late: 0 }
+    { present: 0, absent: 0, late: 0, excused: 0 }
   ), [roster, statuses])
 
   const markAll = (status) => {
@@ -49,12 +50,18 @@ export default function Attendance() {
   }
 
   const submit = async () => {
+    const unmarked = roster.filter((student) => !statuses[student.id])
+    if (unmarked.length) {
+      setSaveState({ loading: false, message: '', error: `Mark attendance for all ${unmarked.length} remaining students before saving.` })
+      return
+    }
+
     setSaveState({ loading: true, message: '', error: '' })
     try {
       await saveAttendance(roster.map((student) => ({
         student_id: student.id,
         attended_on: date,
-        status: statuses[student.id] ?? 'present',
+        status: statuses[student.id],
       })))
       setSaveState({ loading: false, message: `Saved attendance for ${roster.length} students.`, error: '' })
       sheet.reload()
@@ -83,7 +90,7 @@ export default function Attendance() {
       <GlassCard className="p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SectionHeader title="Class register" description={`${roster.length} students`} />
-          <div className="flex gap-2"><Badge tone="success" dot>{counts.present} present</Badge><Badge tone="danger" dot>{counts.absent} absent</Badge><Badge tone="warning" dot>{counts.late} late</Badge></div>
+          <div className="flex flex-wrap gap-2"><Badge tone="success" dot>{counts.present} present</Badge><Badge tone="danger" dot>{counts.absent} absent</Badge><Badge tone="warning" dot>{counts.late} late</Badge><Badge tone="info" dot>{counts.excused} excused</Badge></div>
         </div>
         {!sheet.data ? (
           <div className="mt-5 space-y-2">{[0, 1, 2].map((item) => <Skeleton key={item} className="h-16" />)}</div>
@@ -106,7 +113,7 @@ export default function Attendance() {
         {saveState.error && <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{saveState.error}</p>}
         {saveState.message && <p role="status" className="mt-4 flex items-center gap-2 text-sm text-emerald-700"><Check className="h-4 w-4" />{saveState.message}</p>}
         <div className="mt-5 flex justify-end">
-          <button type="button" onClick={submit} disabled={!roster.length || saveState.loading || !sheet.data} className="inline-flex h-11 items-center gap-2 rounded-full bg-night-900 px-5 text-sm font-medium text-white disabled:opacity-50">
+          <button type="button" onClick={submit} disabled={!roster.length || saveState.loading || sheet.loading || !sheet.data} className="inline-flex h-11 items-center gap-2 rounded-full bg-night-900 px-5 text-sm font-medium text-white disabled:opacity-50">
             {saveState.loading && <Loader2 className="h-4 w-4 animate-spin" />}Save attendance
           </button>
         </div>

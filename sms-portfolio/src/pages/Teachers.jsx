@@ -76,7 +76,7 @@ function TeacherForm({ teacher, onClose, onSave }) {
 }
 
 export default function Teachers() {
-  const teachersQuery = useAsync(fetchTeachersPage, [])
+  const teachersQuery = useAsync(fetchTeachersPage, [], ['teachers', 'users'])
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState(null)
   const [dialogOpen, setDialogOpen] = useState(false)

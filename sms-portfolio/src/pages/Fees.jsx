@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react'
-import { Check, Loader2, Wallet } from 'lucide-react'
+import { Check, Loader2, Plus, Wallet } from 'lucide-react'
 import { useAsync } from '../hooks/useAsync.js'
 import { feeState } from '../lib/analytics.js'
 import { formatDate, pkr, toISODate } from '../lib/format.js'
-import { fetchFeesPage, recordFeePayment } from '../lib/api.js'
+import { fetchFeesPage, issueFeeVoucher, recordFeePayment } from '../lib/api.js'
 import Badge from '../components/ui/Badge.jsx'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
 import { Skeleton } from '../components/ui/States.jsx'
-import { Field, FORM_BUTTON, FormError, ManagementError, ManagementModal } from '../components/admin/ManagementUi.jsx'
+import { Field, FORM_BUTTON, FormError, ManagementError, ManagementModal, SelectField } from '../components/admin/ManagementUi.jsx'
 
 const STATE = {
   paid: { label: 'Paid', tone: 'success' },
@@ -55,13 +55,54 @@ function PaymentForm({ fee, onClose, onSave }) {
   )
 }
 
+function VoucherForm({ students, onClose, onSave }) {
+  const [form, setForm] = useState({ studentId: '', title: '', amount: '', dueDate: '' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async (event) => {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      await onSave(form)
+    } catch (saveError) {
+      setError(saveError.message || 'Could not issue the fee voucher.')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <ManagementModal title="Issue fee voucher" description="Create an invoice for a student." onClose={onClose}>
+      <form onSubmit={submit} className="mt-5 space-y-4">
+        <SelectField label="Student" value={form.studentId} onChange={(event) => setForm((current) => ({ ...current, studentId: event.target.value }))} required>
+          <option value="">Select a student</option>
+          {students.map((student) => <option key={student.id} value={student.id}>{student.name} · {student.admission_no}</option>)}
+        </SelectField>
+        <Field label="Voucher description" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} maxLength={160} required autoFocus />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Amount (PKR)" type="number" min="0.01" step="0.01" value={form.amount} onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))} required />
+          <Field label="Due date" type="date" value={form.dueDate} onChange={(event) => setForm((current) => ({ ...current, dueDate: event.target.value }))} required />
+        </div>
+        <FormError>{error}</FormError>
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} disabled={saving} className={`${FORM_BUTTON} hover:bg-ink/5`}>Cancel</button>
+          <button type="submit" disabled={saving || !students.length} className={`${FORM_BUTTON} bg-night-900 text-white`}>{saving ? 'Saving…' : 'Issue voucher'}</button>
+        </div>
+      </form>
+    </ManagementModal>
+  )
+}
+
 export default function Fees() {
-  const feesQuery = useAsync(fetchFeesPage, [])
+  const feesQuery = useAsync(fetchFeesPage, [], ['fees', 'fee_payments', 'students', 'users'])
   const [selectedFee, setSelectedFee] = useState(null)
+  const [voucherOpen, setVoucherOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
-  const fees = feesQuery.data ?? []
+  const fees = feesQuery.data?.fees ?? []
+  const students = feesQuery.data?.students ?? []
 
   const totals = useMemo(() => fees.reduce(
     (result, fee) => {
@@ -87,6 +128,13 @@ export default function Fees() {
     }
   }
 
+  const saveVoucher = async (voucher) => {
+    await issueFeeVoucher(voucher)
+    setVoucherOpen(false)
+    setMessage('Fee voucher issued.')
+    await feesQuery.reload()
+  }
+
   if (feesQuery.error) return <ManagementError error={feesQuery.error} onRetry={feesQuery.reload} />
 
   return (
@@ -103,7 +151,13 @@ export default function Fees() {
       </div>
 
       <GlassCard className="overflow-hidden">
-        <div className="p-5 sm:p-6"><SectionHeader title="Fee records" description={`${fees.length} invoices across all students`} /></div>
+        <div className="p-5 sm:p-6">
+          <SectionHeader
+            title="Fee records"
+            description={`${fees.length} invoices across all students`}
+            action={<button type="button" onClick={() => { setVoucherOpen(true); setMessage(''); setError('') }} disabled={!students.length} className="inline-flex h-10 items-center gap-2 rounded-xl bg-night-900 px-4 text-sm font-medium text-white disabled:opacity-50"><Plus className="h-4 w-4" />Issue voucher</button>}
+          />
+        </div>
         {error && <p role="alert" className="mx-5 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
         {message && <p role="status" className="mx-5 flex items-center gap-2 text-sm text-emerald-700"><Check className="h-4 w-4" />{message}</p>}
         {!feesQuery.data ? (
@@ -124,7 +178,11 @@ export default function Fees() {
                 return <tr key={fee.id} className="hover:bg-white/50">
                   <td className="px-5 py-3.5"><p className="font-medium">{fee.student?.name ?? 'Unknown student'}</p><p className="text-xs text-ink/50">{fee.student?.admission_no ?? ''}</p></td>
                   <td className="px-5 py-3.5">{fee.title}</td>
-                  <td className="px-5 py-3.5 tabular-nums">{pkr(fee.amount)}<p className="text-xs text-ink/50">Paid {pkr(fee.amount_paid)}</p></td>
+                  <td className="px-5 py-3.5 tabular-nums">
+                    {pkr(fee.amount)}
+                    <p className="text-xs text-ink/50">Paid {pkr(fee.amount_paid)} · Due {pkr(balance)}</p>
+                    {fee.fee_payments?.map((payment) => <p key={payment.id} className="text-xs text-ink/45">{formatDate(payment.paid_on)} · {pkr(payment.amount)}</p>)}
+                  </td>
                   <td className="px-5 py-3.5">{formatDate(fee.due_date)}</td>
                   <td className="px-5 py-3.5"><Badge tone={status.tone} dot>{status.label}</Badge></td>
                   <td className="px-5 py-3.5 text-right">{balance > 0 ? <button type="button" disabled={saving} onClick={() => { setSelectedFee(fee); setMessage(''); setError('') }} className="h-9 rounded-lg bg-lilac-100 px-3 text-xs font-medium text-lilac-600 hover:bg-lilac-200 disabled:opacity-50">Record payment</button> : <span className="text-xs text-ink/45">Settled</span>}</td>
@@ -135,6 +193,7 @@ export default function Fees() {
         )}
       </GlassCard>
       {selectedFee && <PaymentForm key={selectedFee.id} fee={selectedFee} onClose={() => setSelectedFee(null)} onSave={savePayment} />}
+      {voucherOpen && <VoucherForm students={students} onClose={() => setVoucherOpen(false)} onSave={saveVoucher} />}
       {saving && <span className="sr-only" aria-live="polite"><Loader2 className="animate-spin" />Saving payment</span>}
     </div>
   )

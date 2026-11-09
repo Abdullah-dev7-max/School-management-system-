@@ -23,7 +23,7 @@ export default function HeroBanner() {
     <section className="rounded-2xl border border-white/70 bg-gradient-to-r from-lilac-100 to-pink-100 px-5 py-4 shadow-[0_14px_36px_-24px_rgba(94,60,190,0.55)] sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
         <h2 className="text-2xl font-semibold leading-tight tracking-tight text-ink">
-          {getGreeting(now)}{profile.name ? `, ${profile.name}` : ''}
+          {getGreeting(now)}, {profile.full_name}
         </h2>
         <p className="inline-flex items-center gap-2 text-sm text-ink/65">
           <CalendarDays aria-hidden="true" className="h-4 w-4" />

@@ -146,7 +146,7 @@ function StudentDialog({ student, classes, onClose, onSave }) {
 }
 
 export default function Students() {
-  const studentsQuery = useAsync(fetchStudentsPage, [])
+  const studentsQuery = useAsync(fetchStudentsPage, [], ['students', 'users', 'classes'])
   const [query, setQuery] = useState('')
   const [classFilter, setClassFilter] = useState('all')
   const [editing, setEditing] = useState(null)

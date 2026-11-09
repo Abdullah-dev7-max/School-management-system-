@@ -1,10 +1,10 @@
 # Scholara School Management
 
-A React dashboard prototype for school administrators, teachers, students, and
-parents. It uses Vite for development/builds, Tailwind CSS for styling, and
-Supabase for school data.
+An administrator workspace for maintaining institute records in Supabase. All
+student, teacher, class, fee, attendance, and marks data is read from the
+database; the application does not create sample records.
 
-## Run locally
+## Setup
 
 Requirements: Node.js and npm.
 
@@ -12,36 +12,54 @@ From PowerShell:
 
 ```powershell
 cd .\sms-portfolio
-npm install
+npm ci
 Copy-Item .env.example .env
 ```
 
-Edit `.env` and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` using
-Supabase **Project Settings → API**. Use only the public anon key in this
-browser app; never put a `service_role` key in a `VITE_` variable. Restart the
-dev server after changing environment variables.
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env` using Supabase
+**Project Settings → API**. The browser app uses only the public anon key; never
+put a `service_role` key in a `VITE_` variable.
 
-In Supabase **SQL Editor**, run these scripts in order to create the database:
+In Supabase **SQL Editor**, run these scripts in order:
 
 1. `database/schema.sql`
 2. `database/step2_migration.sql`
 3. `database/students_crud_migration.sql`
 4. `database/management_pages_migration.sql`
+5. `database/production_security_migration.sql`
 
-The schema creates empty tables and does not add sample users or school records.
-Use the management pages to add real data. `schema.sql` drops and recreates core
-tables, so do not rerun it on a database with data you need to keep.
+These scripts are safe to rerun and do not reset existing tables. The last
+migration removes only the former application's known deterministic sample
+accounts, their dependent records, and its sample notices.
 
-The Students page needs the third migration because it adds enrollment status
-and anonymous demo create/update/delete policies. For an existing database,
-run only `students_crud_migration.sql` in the SQL Editor; do not rerun
-`schema.sql`, which resets core tables.
+### Initial administrator account
 
-Teachers, Classes, Attendance, Fees, and Marks use
-`database/management_pages_migration.sql` to add teacher status and the demo
-write policies needed by those pages. Run it once in the existing demo project.
+Before creating an account, add the one permitted initial admin email in SQL
+Editor, replacing the value with the institute administrator's actual email:
 
-Then start the site:
+```sql
+insert into public.admin_signup_allowlist (id, email)
+values (true, lower(trim('admin@your-institute.org')))
+on conflict (id) do update set email = excluded.email;
+```
+
+Enable email/password sign-in and email confirmation in Supabase
+**Authentication → Providers**. The app exposes initial signup only while the
+allowlist is populated. A database trigger accepts only that exact email,
+creates its admin profile, and consumes the allowlist entry. Subsequent public
+signups are rejected by the database trigger. The signup form also requires a
+12-character password; configure Supabase Auth's password policy and rate
+limits to enforce the institute's deployment requirements.
+
+For an existing database, back it up first, confirm that the first four schema
+scripts have been applied, and then run
+`database/production_security_migration.sql`. This migration removes the known
+former demo seed records and replaces the old anonymous policies with
+authenticated admin-only policies. A deployment already containing a real
+Supabase Auth administrator should link that account to its `public.users`
+profile before using the app rather than bootstrapping a second admin.
+
+Run the app:
 
 ```powershell
 npm run dev
@@ -54,67 +72,38 @@ npm run build
 npm run preview
 ```
 
-`npm install` creates/updates `package-lock.json`; subsequent clean installs can
-use `npm ci`.
+## Institute operations
 
-## How the app is arranged
+- Dashboard (`/` and `/dashboard`): live counts, attendance, fee balances,
+  revenue, and student records from Supabase. The compact greeting uses the
+  authenticated administrator's database name and the current local date/time.
+- Students (`/students`): create, view, update, and delete student records,
+  including class/section assignment.
+- Teachers (`/teachers`): create, view, update, and delete staff records.
+- Classes (`/classes`): create, view, update, and delete classes and assign
+  teachers. Deleting a class unassigns its students and removes its timetable.
+- Attendance (`/attendance`): enter and edit daily attendance by class/date.
+- Marks (`/marks`): enter and edit examination marks by class, subject, and
+  exam.
+- Fees (`/fees`): issue student vouchers in PKR, record partial or full
+  payments, and review outstanding balances and payment history.
+- Settings (`/settings`): update the administrator's database profile and
+  institute information.
 
-- `src/main.jsx` starts React, routing, animation preferences, and the role context.
-- `src/App.jsx` defines routes; `src/components/layout/` contains the shared shell.
-- `src/config/navigation.js` is the source for role names and menus.
-- `src/pages/` contains the role dashboards; `src/components/admin/`,
-  `teacher/`, and `portal/` contain their feature UI.
-- `src/lib/api.js` is the Supabase data-access layer; `analytics.js` and
-  `format.js` provide calculations and formatting.
-- `src/hooks/` and `src/context/` hold shared React state and async loading.
-- `database/` contains the empty Supabase schema and its migrations.
+Admin data pages subscribe to Supabase Realtime changes for immediate refresh.
+Ensure the `supabase_realtime` publication remains enabled for the tables added
+by the production migration.
 
-## What currently works
+## Security and scope
 
-- Admin dashboard: student/staff totals, fee and attendance summaries, charts,
-  and a searchable/filterable student table.
-- Students page (`/students`): search and class filter, plus create, edit, and
-  delete actions. Deleting a student also deletes their linked attendance,
-  marks, and fees.
-- Teachers (`/teachers`), Classes (`/classes`), Attendance (`/attendance`),
-  Fees (`/fees`), and Marks (`/marks`) management pages; school settings
-  (`/settings`) are stored in the current browser's local storage.
-- Dashboard greetings use the full name saved in Settings. The compact hero is
-  shown on `/` and `/dashboard`, not on management pages.
-- Teacher, student, and parent dashboard data requires authenticated user
-  identity; those views display a sign-in notice until authentication is added.
-- Sidebar, role switcher, responsive layout, and saved sidebar/role preferences.
-
-The dashboards read and write Supabase data. Missing Supabase environment
-variables prevent the app from starting; missing database tables or policies
-show errors in data-backed screens rather than falling back to sample data.
-
-## Gaps and important limitations
-
-This is currently a **demo/prototype**, not a production school system:
-
-- The role switcher changes a locally stored UI role; there is no login,
-  password, or verified user identity. It is not access control. Teacher,
-  student, and parent personal dashboards remain unavailable until
-  authentication is connected.
-- The database policies are intentionally broad for demo use. The anon role can
-  read school records, and step 2 allows anon attendance/marks writes. Do not
-  put real student data in this setup or deploy it as-is. Production needs
-  Supabase Auth and policies that restrict each operation to the signed-in user
-  and their permitted role/records.
-- `database/schema.sql` drops and recreates core tables. `step2_migration.sql`
-  also drops and recreates notices and timetable tables. These scripts can erase
-  data; back up the database before applying them to an existing installation.
-- The sidebar's search and notification control are visual only. Fee
-  management records payments by updating the invoice balance; it does not
-  integrate a payment gateway.
-- The header search and notification control are visual only. Fee payment,
-  user management, and notice management are not implemented.
-- There is no automated test or lint script yet. The production build currently
-  emits a large JavaScript chunk warning, and `npm audit` reports dependency
-  advisories; review/upgrade dependencies before production deployment.
-
-Suggested implementation order: (1) authentication and restrictive database
-policies, (2) core admin CRUD pages and route-specific screens, (3) payment and
-notification workflows, then (4) automated tests, linting, and production
-deployment configuration.
+- All institute data tables use row-level security. Anonymous access is
+  revoked; authenticated operations require the linked administrator profile.
+  The database policy is the security boundary, not the UI.
+- The role switcher and unauthenticated teacher/student/parent portals have been
+  removed. Student and teacher contact records created by the admin are not
+  Supabase Auth accounts.
+- Use a separate Supabase project per institute. This schema is single-institute
+  and does not provide tenant isolation for multiple schools in one database.
+- Configure Supabase Auth email confirmation, password policy, rate limiting,
+  backups, monitoring, and recovery procedures before deployment. Do not expose
+  student information through public storage or external logs.

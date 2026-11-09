@@ -48,9 +48,14 @@ export function monthlyRevenue(fees, months = 6) {
   }
   const index = Object.fromEntries(buckets.map((b) => [b.key, b]))
   fees.forEach((fee) => {
-    if (!fee.paid_on) return
-    const bucket = index[fee.paid_on.slice(0, 7)]
-    if (bucket) bucket.revenue += Number(fee.amount_paid)
+    const payments = fee.fee_payments ?? (fee.paid_on && Number(fee.amount_paid) > 0
+      ? [{ amount: fee.amount_paid, paid_on: fee.paid_on }]
+      : [])
+    payments.forEach((payment) => {
+      if (!payment.paid_on) return
+      const bucket = index[payment.paid_on.slice(0, 7)]
+      if (bucket) bucket.revenue += Number(payment.amount)
+    })
   })
   return buckets
 }

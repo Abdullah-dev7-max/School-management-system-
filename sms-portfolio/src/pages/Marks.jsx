@@ -3,25 +3,21 @@ import { Check, Loader2 } from 'lucide-react'
 import { useAsync } from '../hooks/useAsync.js'
 import { saveClassMarks, fetchMarksPage } from '../lib/api.js'
 import { gradeFor } from '../lib/analytics.js'
-import { toISODate } from '../lib/format.js'
 import Badge from '../components/ui/Badge.jsx'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
 import { Skeleton } from '../components/ui/States.jsx'
 import { Field, FORM_BUTTON, FormError, ManagementError, SelectField } from '../components/admin/ManagementUi.jsx'
 
-const SUBJECTS = ['Mathematics', 'English', 'Science', 'Urdu', 'Computer Science']
-const EXAMS = ['Unit test 1', 'Mid-term', 'Final term']
-
 export default function Marks() {
   const [classId, setClassId] = useState('')
-  const [subject, setSubject] = useState(SUBJECTS[0])
-  const [exam, setExam] = useState(EXAMS[1])
-  const [examDate, setExamDate] = useState(toISODate())
-  const [maxScore, setMaxScore] = useState('100')
+  const [subject, setSubject] = useState('')
+  const [exam, setExam] = useState('')
+  const [examDate, setExamDate] = useState('')
+  const [maxScore, setMaxScore] = useState('')
   const [scores, setScores] = useState({})
   const [saveState, setSaveState] = useState({ loading: false, error: '', message: '' })
-  const sheet = useAsync(() => fetchMarksPage(classId, subject, exam), [classId, subject, exam])
+  const sheet = useAsync(() => fetchMarksPage(classId, subject, exam), [classId, subject, exam], ['classes', 'students', 'users', 'marks'])
   const classes = sheet.data?.classes ?? []
   const roster = sheet.data?.roster ?? []
   const max = Number(maxScore)
@@ -34,7 +30,13 @@ export default function Marks() {
   useEffect(() => {
     if (!sheet.data) return
     setScores(Object.fromEntries(sheet.data.roster.map((student) => [student.id, student.score === '' ? '' : String(Number(student.score))])))
-    if (sheet.data.roster.length) setMaxScore(String(Number(sheet.data.roster[0].maxScore) || 100))
+    if (sheet.data.roster.length) {
+      setMaxScore(String(sheet.data.roster[0].maxScore))
+      setExamDate(sheet.data.roster.find((student) => student.examDate)?.examDate ?? '')
+    } else {
+      setMaxScore('')
+      setExamDate('')
+    }
     setSaveState({ loading: false, error: '', message: '' })
   }, [sheet.data])
 
@@ -95,10 +97,10 @@ export default function Marks() {
             {!classes.length && <option value="">No classes available</option>}
             {classes.map((item) => <option key={item.id} value={item.id}>{item.name} {item.section}</option>)}
           </SelectField>
-          <SelectField label="Subject" value={subject} onChange={(event) => setSubject(event.target.value)}>{SUBJECTS.map((item) => <option key={item}>{item}</option>)}</SelectField>
-          <SelectField label="Exam" value={exam} onChange={(event) => setExam(event.target.value)}>{EXAMS.map((item) => <option key={item}>{item}</option>)}</SelectField>
+          <Field label="Subject" value={subject} onChange={(event) => setSubject(event.target.value)} maxLength={120} required />
+          <Field label="Examination" value={exam} onChange={(event) => setExam(event.target.value)} maxLength={120} required />
           <Field label="Exam date" type="date" value={examDate} onChange={(event) => setExamDate(event.target.value)} />
-          <Field label="Total marks" type="number" min="1" step="0.5" value={maxScore} onChange={(event) => setMaxScore(event.target.value)} required />
+          <Field label="Total marks" type="number" min="0.01" step="0.01" value={maxScore} onChange={(event) => setMaxScore(event.target.value)} required />
         </div>
       </GlassCard>
 
@@ -123,7 +125,7 @@ export default function Marks() {
                 return <tr key={student.id} className="hover:bg-white/50">
                   <td className="px-5 py-3.5"><p className="font-medium">{student.name}</p><p className="text-xs text-ink/50">Roll {student.rollNo ?? '–'}</p></td>
                   <td className="px-5 py-3.5 text-ink/60">{student.admissionNo}</td>
-                  <td className="px-5 py-3.5"><input type="number" min="0" max={maxValid ? max : undefined} step="0.5" inputMode="decimal" value={raw} onChange={(event) => { setScores((current) => ({ ...current, [student.id]: event.target.value })); setSaveState({ loading: false, error: '', message: '' }) }} aria-label={`Obtained marks for ${student.name}`} aria-invalid={Boolean(result.errors[student.id])} className={`h-10 w-32 rounded-xl border bg-white px-3 text-sm outline-none focus-visible:ring-2 ${result.errors[student.id] ? 'border-rose-400 focus-visible:ring-rose-400' : 'border-ink/10 focus-visible:ring-lilac-500/60'}`} />{result.errors[student.id] && <p className="mt-1 text-xs text-rose-700">{result.errors[student.id]}</p>}</td>
+                  <td className="px-5 py-3.5"><input type="number" min="0" max={maxValid ? max : undefined} step="0.01" inputMode="decimal" value={raw} onChange={(event) => { setScores((current) => ({ ...current, [student.id]: event.target.value })); setSaveState({ loading: false, error: '', message: '' }) }} aria-label={`Obtained marks for ${student.name}`} aria-invalid={Boolean(result.errors[student.id])} className={`h-10 w-32 rounded-xl border bg-white px-3 text-sm outline-none focus-visible:ring-2 ${result.errors[student.id] ? 'border-rose-400 focus-visible:ring-rose-400' : 'border-ink/10 focus-visible:ring-lilac-500/60'}`} />{result.errors[student.id] && <p className="mt-1 text-xs text-rose-700">{result.errors[student.id]}</p>}</td>
                   <td className="px-5 py-3.5 text-ink/60">{maxValid ? max : '–'}</td>
                   <td className="px-5 py-3.5">{percent == null ? '–' : <Badge tone="brand">{gradeFor(percent)} · {Math.round(percent)}%</Badge>}</td>
                 </tr>
@@ -134,7 +136,7 @@ export default function Marks() {
         {saveState.error && <FormError>{saveState.error}</FormError>}
         {saveState.message && <p role="status" className="mx-5 mt-3 flex items-center gap-2 text-sm text-emerald-700"><Check className="h-4 w-4" />{saveState.message}</p>}
         <div className="flex justify-end p-5">
-          <button type="submit" disabled={!roster.length || saveState.loading || !sheet.data} className={`${FORM_BUTTON} h-11 rounded-full bg-night-900 px-5 text-white`}>
+          <button type="submit" disabled={!roster.length || !subject.trim() || !exam.trim() || saveState.loading || sheet.loading || !sheet.data} className={`${FORM_BUTTON} h-11 rounded-full bg-night-900 px-5 text-white`}>
             {saveState.loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save marks
           </button>
         </div>

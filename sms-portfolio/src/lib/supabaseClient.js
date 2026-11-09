@@ -9,15 +9,4 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-/**
- * Single shared Supabase client.
- * The app has no login, so sessions are disabled: every request uses the
- * public anon key and is limited by the RLS policies in database/schema.sql.
- */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false,
-  },
-})
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
