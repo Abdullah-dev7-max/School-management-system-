@@ -61,31 +61,13 @@ The migrations replace broad anonymous access with authenticated, role-limited
 policies. The login profile migration links an existing institute profile to a
 Supabase Auth account when their email matches and Supabase confirms the email.
 
-### Deploy account management
-
-The Admin dashboard creates Auth accounts through a Supabase Edge Function so
-the administrator's browser session remains signed in. Link the Supabase CLI
-to the institute project and deploy the function:
-
-```powershell
-supabase link --project-ref <project-ref>
-supabase functions deploy manage-accounts
-```
-
-The function uses Supabase's `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and
-`SUPABASE_SERVICE_ROLE_KEY` server-side environment variables. Ensure the
-service-role key is configured as an Edge Function secret if it is not already
-available in the project's runtime. Never put it in the browser `.env` file or
-in any `VITE_` variable.
-
 ### Staff, student, and parent accounts
 
 From the Admin dashboard's **Quick actions** or the Students and Teachers
-management pages, add student records directly to the database. Student
-enrollment creates a `public.users` profile and linked `public.students`
-record, but does not create a student Auth login. Teacher creation provisions
-an Auth login through the Edge Function and creates the linked staff records;
-initial passwords must contain at least 12 characters.
+management pages, add student and teacher records directly to the database.
+Enrollment creates a `public.users` profile and a linked `public.students` or
+`public.teachers` record, but does not create a student or teacher Auth login.
+Portal access requires a separately linked Supabase Auth account.
 
 The parent dashboard shows only students explicitly linked through
 `students.parent_id`. Teacher, student, and parent portals are read-only; RLS

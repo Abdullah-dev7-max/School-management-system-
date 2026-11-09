@@ -9,7 +9,6 @@ import { Field, FORM_BUTTON, FormError, ManagementModal, SelectField } from './M
 const EMPTY_FORM = {
   fullName: '',
   email: '',
-  password: '',
   phone: '',
   classId: '',
   rollNo: '',
@@ -28,7 +27,7 @@ const EMPTY_FORM = {
 
 const ACTIONS = [
   { id: 'student', label: 'Add New Student', icon: Users, description: 'Add a student profile and enrollment record.' },
-  { id: 'teacher', label: 'Add New Teacher', icon: GraduationCap, description: 'Create a teacher login and staff record.' },
+  { id: 'teacher', label: 'Add New Teacher', icon: GraduationCap, description: 'Add a teacher profile and staff record.' },
   { id: 'fee', label: 'Add Fee Record', icon: Wallet, description: 'Issue a fee voucher to an enrolled student.' },
   { id: 'marks', label: 'Add Marks', icon: BookOpenCheck, description: 'Enter an examination mark for a student.' },
 ]
@@ -86,7 +85,6 @@ function ActionForm({ action, students, classes, onClose, onSaved }) {
     }
   }
 
-  const accountForm = action === 'student' || action === 'teacher'
   const selectedAction = ACTIONS.find((item) => item.id === action)
 
   return (
@@ -112,7 +110,6 @@ function ActionForm({ action, students, classes, onClose, onSaved }) {
             <Field label="Full name" name="fullName" value={form.fullName} onChange={change} maxLength={120} required autoFocus />
             <Field label="Email" name="email" type="email" autoComplete="email" value={form.email} onChange={change} required />
           </div>
-          <Field label="Initial password (at least 12 characters)" name="password" type="password" autoComplete="new-password" minLength={12} value={form.password} onChange={change} required />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Subject" name="subject" value={form.subject} onChange={change} required />
             <Field label="Phone number" name="phone" type="tel" value={form.phone} onChange={change} />
@@ -153,7 +150,7 @@ function ActionForm({ action, students, classes, onClose, onSaved }) {
         <div className="sticky bottom-0 flex justify-end gap-2 bg-[rgba(255,255,255,0.8)] py-2">
           <button type="button" onClick={onClose} disabled={saving} className={`${FORM_BUTTON} hover:bg-ink/5`}>Cancel</button>
           <button type="submit" disabled={saving || ((action === 'fee' || action === 'marks') && !students.length) || (action === 'marks' && Number(form.score) > Number(form.maxScore))} className={`${FORM_BUTTON} bg-night-900 text-white`}>
-            {saving ? 'Saving…' : action === 'fee' ? `Issue voucher${form.amount ? ` · ${pkr(form.amount)}` : ''}` : action === 'marks' ? 'Save marks' : accountForm ? 'Create account' : 'Save'}
+            {saving ? 'Saving…' : action === 'fee' ? `Issue voucher${form.amount ? ` · ${pkr(form.amount)}` : ''}` : action === 'marks' ? 'Save marks' : action === 'student' || action === 'teacher' ? 'Add record' : 'Save'}
           </button>
         </div>
       </form>
