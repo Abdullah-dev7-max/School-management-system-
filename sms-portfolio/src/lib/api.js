@@ -220,12 +220,38 @@ export async function fetchTeachersPage() {
 }
 
 export async function createTeacher(values) {
-  const { data, error } = await supabase.functions.invoke('manage-accounts', {
-    body: { action: 'create_teacher', ...values },
-  })
-  if (error) throw new Error(error.message)
-  if (data?.error) throw new Error(data.error)
-  return data
+  const { data: profile, error: profileError } = await supabase
+    .from('users')
+    .insert({
+      full_name: values.fullName.trim(),
+      email: values.email.trim().toLowerCase(),
+      role: 'teacher',
+      phone: values.phone?.trim() || null,
+    })
+    .select('id')
+    .single()
+  if (profileError) throw new Error(profileError.message)
+
+  const { data: teacher, error: teacherError } = await supabase
+    .from('teachers')
+    .insert({
+      user_id: profile.id,
+      employee_code: values.employeeCode.trim(),
+      subject: values.subject.trim(),
+      status: values.status || 'active',
+    })
+    .select('id')
+    .single()
+
+  if (teacherError) {
+    const { error: cleanupError } = await supabase.from('users').delete().eq('id', profile.id)
+    if (cleanupError) {
+      throw new Error(`${teacherError.message} The unlinked profile cleanup also failed: ${cleanupError.message}`)
+    }
+    throw new Error(teacherError.message)
+  }
+
+  return teacher
 }
 
 export async function updateTeacher(teacher, { fullName, email, phone, employeeCode, subject, status }) {
