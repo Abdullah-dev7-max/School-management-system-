@@ -105,7 +105,7 @@ function NavItem({ to, label, icon: Icon, collapsed, pillId, onNavigate }) {
 }
 
 function ProfileCard({ collapsed, onNavigate }) {
-  const { profile, accent, role } = useRole()
+  const { profile, accent, role, roles } = useRole()
 
   return (
     <div className="shrink-0 p-3">
@@ -127,7 +127,7 @@ function ProfileCard({ collapsed, onNavigate }) {
               transition={{ duration: 0.16 }}
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-white">{profile.name}</p>
+                <p className="truncate text-sm font-semibold text-white">{profile.name || roles[role].label}</p>
                 <p className="truncate text-xs text-white/45">{profile.title}</p>
               </div>
               <NavLink

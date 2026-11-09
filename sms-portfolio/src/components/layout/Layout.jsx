@@ -55,7 +55,7 @@ export default function Layout() {
 
         <main className="thin-scroll flex-1 overflow-y-auto px-4 pb-10 pt-6 sm:px-6 lg:px-8">
           <div className="mx-auto w-full max-w-[1400px] space-y-6">
-            <HeroBanner />
+            {(pathname === '/' || pathname === '/dashboard') && <HeroBanner />}
 
             <motion.div
               key={pathname}

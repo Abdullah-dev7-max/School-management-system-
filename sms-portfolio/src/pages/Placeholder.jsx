@@ -12,8 +12,7 @@ export default function Placeholder() {
       <div className="glass rounded-3xl p-6">
         <h3 className="text-lg font-semibold tracking-tight">{label}</h3>
         <p className="mt-1 max-w-lg text-sm text-ink/60">
-          This page is not built yet. You are viewing it as {roles[role].label.toLowerCase()}, so the sidebar and
-          hero already match that role.
+          This page is not built yet. You are viewing it as {roles[role].label.toLowerCase()}.
         </p>
       </div>
 

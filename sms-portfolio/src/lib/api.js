@@ -337,33 +337,6 @@ export async function saveClassMarks(rows) {
 
 /* ----------------------------- Teacher ----------------------------- */
 
-async function userByEmail(email, role) {
-  const user = unwrap(await supabase.from('users').select('id, full_name').eq('email', email).eq('role', role).maybeSingle())
-  if (!user) throw new Error(`No ${role} found for ${email}. Did you run database/schema.sql?`)
-  return user
-}
-
-export async function fetchTeacherContext(email) {
-  const user = await userByEmail(email, 'teacher')
-  const teacher = unwrap(
-    await supabase
-      .from('teachers')
-      .select('id, subject, classes(id, name, section, room)')
-      .eq('user_id', user.id)
-      .maybeSingle()
-  )
-  if (!teacher) throw new Error('This user has no teacher profile.')
-
-  return {
-    teacherId: teacher.id,
-    name: user.full_name,
-    subject: teacher.subject,
-    classes: (teacher.classes ?? [])
-      .map((c) => ({ id: c.id, label: className(c), room: c.room }))
-      .sort((a, b) => a.label.localeCompare(b.label)),
-  }
-}
-
 export async function fetchRoster(classId) {
   const rows = unwrap(
     await supabase
@@ -421,32 +394,6 @@ export async function fetchTimetable(teacherId) {
       .order('day_of_week')
       .order('period')
   )
-}
-
-/* ----------------------------- Student & parent ----------------------------- */
-
-const CHILD_COLS = 'id, roll_no, classes(name, section), student:users!user_id(full_name)'
-const toChild = (r) => ({ id: r.id, name: r.student?.full_name ?? 'Student', className: className(r.classes), rollNo: r.roll_no })
-
-/** Returns { children: [...] }. A student has one entry, a parent has one per child. */
-export async function fetchPortalContext(role, email) {
-  if (role === 'parent') {
-    const user = await userByEmail(email, 'parent')
-    const rows = unwrap(await supabase.from('students').select(CHILD_COLS).eq('parent_id', user.id).order('roll_no'))
-    return { children: rows.map(toChild) }
-  }
-  const user = await userByEmail(email, 'student')
-  const row = unwrap(await supabase.from('students').select(CHILD_COLS).eq('user_id', user.id).maybeSingle())
-  return { children: row ? [toChild(row)] : [] }
-}
-
-export async function fetchStudentReport(studentId) {
-  const since = toISODate(daysAgo(29))
-  const [marks, attendance] = await Promise.all([
-    supabase.from('marks').select('subject, exam, score, max_score, exam_date').eq('student_id', studentId),
-    supabase.from('attendance').select('attended_on, status').eq('student_id', studentId).gte('attended_on', since),
-  ])
-  return { marks: unwrap(marks), attendance: unwrap(attendance) }
 }
 
 export async function fetchFees(studentId) {
