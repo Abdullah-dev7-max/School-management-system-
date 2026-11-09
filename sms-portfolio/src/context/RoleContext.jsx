@@ -12,10 +12,24 @@ async function fetchUserProfile(user) {
           `${error.message}. Make sure database/login_profile_link_migration.sql has been run in Supabase.`
         )
       }
-      if (!data || data.auth_user_id !== user.id) {
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
         throw new Error('Your sign-in is not linked to an institute profile. Ask your administrator to verify your account.')
       }
-      return data
+      if (
+        typeof data.id !== 'string'
+        || typeof data.full_name !== 'string'
+        || typeof data.email !== 'string'
+        || !Object.hasOwn(ROLES, data.role)
+      ) {
+        throw new Error('The institute profile response is incomplete or has an unsupported role.')
+      }
+      return {
+        id: data.id,
+        full_name: data.full_name,
+        email: data.email,
+        role: data.role,
+        phone: data.phone ?? null,
+      }
     }).finally(() => profileRequests.delete(user.id))
     profileRequests.set(user.id, request)
   }
