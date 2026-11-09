@@ -64,6 +64,7 @@ create table students (
   parent_id      uuid        references users(id)   on delete set null,  -- a user with role 'parent'
   admission_no   text        not null unique,
   roll_no        int,
+  status         text        not null default 'active' check (status in ('active', 'inactive', 'withdrawn')),
   date_of_birth  date,
   gender         text check (gender in ('female', 'male', 'other')),
   created_at     timestamptz not null default now()

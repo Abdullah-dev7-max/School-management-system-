@@ -41,6 +41,81 @@ export async function fetchStudentDirectory() {
   )
 }
 
+export async function fetchStudentsPage() {
+  const [students, classes] = await Promise.all([
+    supabase
+      .from('students')
+      .select(
+        'id, user_id, class_id, admission_no, roll_no, status, classes(id, name, section), student:users!user_id(id, full_name, email)'
+      )
+      .order('admission_no'),
+    supabase.from('classes').select('id, name, section').order('name').order('section'),
+  ])
+  return { students: unwrap(students), classes: unwrap(classes) }
+}
+
+export async function createStudent({ fullName, email, admissionNo, classId, rollNo, status }) {
+  const user = unwrap(
+    await supabase
+      .from('users')
+      .insert({ full_name: fullName, email, role: 'student' })
+      .select('id')
+      .single()
+  )
+
+  try {
+    unwrap(
+      await supabase.from('students').insert({
+        user_id: user.id,
+        admission_no: admissionNo,
+        class_id: classId || null,
+        roll_no: rollNo === '' ? null : Number(rollNo),
+        status,
+      })
+    )
+  } catch (error) {
+    const rollback = await supabase.from('users').delete().eq('id', user.id)
+    if (rollback.error) {
+      throw new Error(`${error.message} Also, the new user profile could not be removed: ${rollback.error.message}`)
+    }
+    throw error
+  }
+}
+
+export async function updateStudent(student, { fullName, email, admissionNo, classId, rollNo, status }) {
+  unwrap(
+    await supabase
+      .from('users')
+      .update({ full_name: fullName, email })
+      .eq('id', student.user_id)
+  )
+
+  const result = await supabase
+    .from('students')
+    .update({
+      admission_no: admissionNo,
+      class_id: classId || null,
+      roll_no: rollNo === '' ? null : Number(rollNo),
+      status,
+    })
+    .eq('id', student.id)
+
+  if (result.error) {
+    const rollback = await supabase
+      .from('users')
+      .update({ full_name: student.student.full_name, email: student.student.email })
+      .eq('id', student.user_id)
+    if (rollback.error) {
+      throw new Error(`${result.error.message} The profile rollback also failed: ${rollback.error.message}`)
+    }
+    throw new Error(result.error.message)
+  }
+}
+
+export async function deleteStudent(userId) {
+  unwrap(await supabase.from('users').delete().eq('id', userId))
+}
+
 /* ----------------------------- Teacher ----------------------------- */
 
 async function userByEmail(email, role) {

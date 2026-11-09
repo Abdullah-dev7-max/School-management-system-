@@ -25,11 +25,17 @@ In Supabase **SQL Editor**, run these scripts in order for the demo database:
 
 1. `database/schema.sql`
 2. `database/step2_migration.sql`
+3. `database/students_crud_migration.sql`
 
 To change the names in an already initialized demo database, run
 `database/rename_demo_users.sql` as a separate query. It updates user display
 names only; emails, roles, IDs, and related school records stay unchanged. New
 database seeds use the same display name.
+
+The Students page needs the third migration because it adds enrollment status
+and anonymous demo create/update/delete policies. For an existing database,
+run only `students_crud_migration.sql` in the SQL Editor; do not rerun
+`schema.sql`, which resets core tables.
 
 Then start the site:
 
@@ -64,6 +70,9 @@ use `npm ci`.
 
 - Admin dashboard: sample student/staff totals, fee and attendance summaries,
   charts, and a searchable/filterable student table.
+- Students page (`/students`): search and class filter, plus create, edit, and
+  delete actions. Deleting a student also deletes their linked attendance,
+  marks, and fees.
 - Teacher dashboard: class attendance, marks entry, and timetable.
 - Student and parent dashboards: performance, attendance, fee summaries, and
   school notices. Parents can switch between linked children.
@@ -87,9 +96,9 @@ This is currently a **demo/prototype**, not a production school system:
 - `database/schema.sql` drops and recreates core tables. `step2_migration.sql`
   also drops and recreates notices and timetable tables. These scripts can erase
   data; use them only for a disposable demo database, not as production upgrades.
-- The sidebar's Students, Teachers, Classes, Fees, Marks, and Settings links
-  mostly resolve to `src/pages/Placeholder.jsx`; several dashboard features
-  are display-only and do not have full management workflows.
+- The Teachers, Classes, Fees, Marks, and Settings links still resolve to
+  `src/pages/Placeholder.jsx`; several dashboard features are display-only and
+  do not have full management workflows.
 - The header search and notification control are visual only. Fee payment,
   user management, and notice management are not implemented.
 - There is no automated test or lint script yet. The production build currently
