@@ -26,6 +26,7 @@ In Supabase **SQL Editor**, run these scripts in order for the demo database:
 1. `database/schema.sql`
 2. `database/step2_migration.sql`
 3. `database/students_crud_migration.sql`
+4. `database/management_pages_migration.sql`
 
 To change the names in an already initialized demo database, run
 `database/rename_demo_users.sql` as a separate query. It updates user display
@@ -36,6 +37,10 @@ The Students page needs the third migration because it adds enrollment status
 and anonymous demo create/update/delete policies. For an existing database,
 run only `students_crud_migration.sql` in the SQL Editor; do not rerun
 `schema.sql`, which resets core tables.
+
+Teachers, Classes, Attendance, Fees, and Marks use
+`database/management_pages_migration.sql` to add teacher status and the demo
+write policies needed by those pages. Run it once in the existing demo project.
 
 Then start the site:
 
@@ -73,6 +78,9 @@ use `npm ci`.
 - Students page (`/students`): search and class filter, plus create, edit, and
   delete actions. Deleting a student also deletes their linked attendance,
   marks, and fees.
+- Teachers (`/teachers`), Classes (`/classes`), Attendance (`/attendance`),
+  Fees (`/fees`), and Marks (`/marks`) management pages; school settings
+  (`/settings`) are stored in the current browser's local storage.
 - Teacher dashboard: class attendance, marks entry, and timetable.
 - Student and parent dashboards: performance, attendance, fee summaries, and
   school notices. Parents can switch between linked children.
@@ -96,9 +104,9 @@ This is currently a **demo/prototype**, not a production school system:
 - `database/schema.sql` drops and recreates core tables. `step2_migration.sql`
   also drops and recreates notices and timetable tables. These scripts can erase
   data; use them only for a disposable demo database, not as production upgrades.
-- The Teachers, Classes, Fees, Marks, and Settings links still resolve to
-  `src/pages/Placeholder.jsx`; several dashboard features are display-only and
-  do not have full management workflows.
+- The sidebar's search and notification control are visual only. Fee
+  management records payments by updating the invoice balance; it does not
+  integrate a payment gateway.
 - The header search and notification control are visual only. Fee payment,
   user management, and notice management are not implemented.
 - There is no automated test or lint script yet. The production build currently
