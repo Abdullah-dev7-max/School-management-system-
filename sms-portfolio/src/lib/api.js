@@ -319,6 +319,49 @@ export async function fetchClassesPage() {
   }
 }
 
+export async function fetchTimetablePage() {
+  const [classResult, teacherResult, slotResult] = await Promise.all([
+    supabase.from('classes').select('id, name, section, academic_year').order('name').order('section'),
+    supabase.from('teachers').select('id, user_id, subject, teacher:users!user_id(full_name)').order('employee_code'),
+    supabase.from('timetable_slots').select('id, class_id, teacher_id, day_of_week, period, starts_at, ends_at, subject, room').order('day_of_week').order('period'),
+  ])
+  return {
+    classes: unwrap(classResult),
+    teachers: unwrap(teacherResult),
+    slots: unwrap(slotResult),
+  }
+}
+
+export async function saveTimetableSlot(values, slotId = null) {
+  if (values.endsAt <= values.startsAt) {
+    throw new Error('End time must be after start time.')
+  }
+  const payload = {
+    class_id: values.classId,
+    teacher_id: values.teacherId || null,
+    day_of_week: Number(values.dayOfWeek),
+    period: Number(values.period),
+    starts_at: values.startsAt,
+    ends_at: values.endsAt,
+    subject: values.subject.trim(),
+    room: values.room.trim() || null,
+  }
+  const query = slotId
+    ? supabase.from('timetable_slots').update(payload).eq('id', slotId)
+    : supabase.from('timetable_slots').insert(payload)
+  const { error } = await query
+  if (error?.code === '23505') {
+    const conflict = new Error('This class already has a lesson in that period.')
+    conflict.code = error.code
+    throw conflict
+  }
+  if (error) throw new Error(error.message)
+}
+
+export async function deleteTimetableSlot(slotId) {
+  unwrap(await supabase.from('timetable_slots').delete().eq('id', slotId))
+}
+
 export async function createClass({ name, section, room, academicYear, classTeacherId }) {
   unwrap(
     await supabase.from('classes').insert({

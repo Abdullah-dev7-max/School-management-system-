@@ -123,6 +123,8 @@ npm run preview
 - Classes (`/classes`): create, view, update, and delete classes and assign
   teachers. A teacher sees only classes where they are selected as Class
   teacher. Deleting a class unassigns its students and removes its timetable.
+- Timetable (`/timetable`): create and manage weekly class periods, including
+  their subject, teacher, time, and room.
 - Attendance (`/attendance`): enter and edit daily attendance by class/date.
 - Marks (`/marks`): enter and edit examination marks by class, subject, and
   exam.

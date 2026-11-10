@@ -16,6 +16,7 @@ import Fees from './pages/Fees.jsx'
 import Marks from './pages/Marks.jsx'
 import TeacherNotes from './pages/TeacherNotes.jsx'
 import TeacherAnnouncements from './pages/TeacherAnnouncements.jsx'
+import Timetable from './pages/Timetable.jsx'
 import Settings from './pages/Settings.jsx'
 import Placeholder from './pages/Placeholder.jsx'
 import { useRole } from './context/RoleContext.jsx'
@@ -82,6 +83,7 @@ export default function App() {
           <Route path="students" element={<Students />} />
           <Route path="teachers" element={<Teachers />} />
           <Route path="classes" element={<Classes />} />
+          <Route path="timetable" element={<Timetable />} />
           <Route path="attendance" element={<AttendanceOverview />} />
           <Route path="fees" element={<Fees />} />
           <Route path="marks" element={<Marks />} />

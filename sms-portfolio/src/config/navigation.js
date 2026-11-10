@@ -11,6 +11,7 @@ import {
   ClipboardList,
   FileText,
   Megaphone,
+  Clock3,
 } from 'lucide-react'
 
 /**
@@ -29,6 +30,7 @@ export const ROLES = {
       { to: '/students', label: 'Students', icon: Users },
       { to: '/teachers', label: 'Teachers', icon: GraduationCap },
       { to: '/classes', label: 'Classes', icon: School },
+      { to: '/timetable', label: 'Timetable', icon: Clock3 },
       { to: '/attendance', label: 'Attendance', icon: CalendarCheck },
       { to: '/fees', label: 'Fees', icon: Wallet },
       { to: '/marks', label: 'Marks', icon: Award },
