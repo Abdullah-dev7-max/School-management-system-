@@ -54,9 +54,14 @@ export async function fetchAdminOverview() {
 }
 
 export async function fetchInstituteSettings() {
-  const { data, error } = await supabase.from('institute_settings').select('*').limit(1).single()
-  if (error && error.code !== 'PGRST116') throw new Error(error.message)
-  return data ?? { school_name: '', address: '', contact_email: '', academic_year: '' }
+  const { data, error } = await supabase
+    .from('institute_settings')
+    .select('*')
+    .limit(1)
+    .single()
+
+  if (error) throw error
+  return data
 }
 
 export async function fetchRoleDashboard(profile, sessionToken) {
