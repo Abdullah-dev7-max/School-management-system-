@@ -21,7 +21,6 @@ import { LogOut } from 'lucide-react'
 
 const roleHome = {
   admin: '/admin',
-  accountant: '/accountant',
   teacher: '/teacher-dashboard',
   student: '/student-dashboard',
   parent: '/parent',
@@ -87,10 +86,6 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Placeholder />} />
         </Route>
-      </Route>
-      <Route path="accountant" element={<RequireRole role="accountant"><Layout /></RequireRole>}>
-        <Route index element={<Fees />} />
-        <Route path="fees" element={<Fees />} />
       </Route>
       <Route path="teacher" element={<RequireRole role="teacher"><Layout /></RequireRole>}>
         <Route index element={<TeacherDashboard />} />

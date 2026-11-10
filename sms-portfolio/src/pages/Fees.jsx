@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { Plus, Printer, ReceiptText, Search, Users, Wallet, X } from 'lucide-react'
 import { useAsync } from '../hooks/useAsync.js'
 import { fetchFeesPage, generateMonthlyFeeVouchers, issueFeeVoucher, recordFeePayment, updateClassFee } from '../lib/api.js'
-import { useRole } from '../context/RoleContext.jsx'
 import { formatDate, pkr, toISODate } from '../lib/format.js'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
@@ -468,7 +467,6 @@ function ReceiptDialog({ receipt, student, schoolName, month, onClose }) {
 }
 
 export default function Fees() {
-  const { role } = useRole()
   const [month, setMonth] = useState(currentMonth)
   const [activeTab, setActiveTab] = useState('ledger')
   const [search, setSearch] = useState('')
@@ -587,7 +585,7 @@ export default function Fees() {
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => setVoucherOpen(true)} className={BUTTON}><Plus className="h-4 w-4" />Issue voucher</button>
                 <button type="button" onClick={() => setBulkVoucherOpen(true)} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-ink/10 bg-white px-4 text-sm font-medium hover:bg-lilac-50">Generate monthly vouchers</button>
-                {role === 'admin' && <button type="button" onClick={() => setClassSettingsOpen(true)} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-ink/10 bg-white px-4 text-sm font-medium hover:bg-lilac-50">Set Class Fees</button>}
+                <button type="button" onClick={() => setClassSettingsOpen(true)} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-ink/10 bg-white px-4 text-sm font-medium hover:bg-lilac-50">Set Class Fees</button>
               </div>
             </div>
             <div className="grid gap-3 border-t border-white/70 p-5 sm:grid-cols-[1fr_auto] sm:p-6">
@@ -674,7 +672,7 @@ export default function Fees() {
           )}
         </>
       )}
-      {role === 'admin' && classSettingsOpen && data && <ClassFeeSettings classes={data.classes} onSave={onSaveClassFee} onClose={() => setClassSettingsOpen(false)} />}
+      {classSettingsOpen && data && <ClassFeeSettings classes={data.classes} onSave={onSaveClassFee} onClose={() => setClassSettingsOpen(false)} />}
       {voucherOpen && data && <IssueVoucherDialog key={voucherStudentId || 'manual'} students={data.students} initialStudentId={voucherStudentId} onSave={page.reload} onClose={() => { setVoucherOpen(false); setVoucherStudentId('') }} />}
       {bulkVoucherOpen && data && <BulkVoucherDialog classes={data.classes} onSave={onGenerateVouchers} onClose={() => setBulkVoucherOpen(false)} />}
       {takeFeeOpen && data && (

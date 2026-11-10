@@ -33,14 +33,6 @@ export const ROLES = {
       { to: '/settings', label: 'Settings', icon: Settings },
     ],
   },
-  accountant: {
-    id: 'accountant',
-    label: 'Accountant',
-    description: 'Manage fee collection and receivables',
-    icon: Wallet,
-    accent: 'from-amber-500 to-emerald-400',
-    nav: [{ to: '/accountant', label: 'Fee collection', icon: Wallet }],
-  },
   teacher: {
     id: 'teacher',
     label: 'Teacher',
