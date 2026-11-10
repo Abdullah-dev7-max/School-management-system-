@@ -234,6 +234,25 @@ Deno.serve(async (request) => {
         .order('name')
         .order('section')
       if (classesError) throw classesError
+      const { data: timetable, error: timetableError } = await admin
+        .from('timetable_slots')
+        .select('id, class_id, day_of_week, period, starts_at, ends_at, subject, room')
+        .eq('teacher_id', teacher.id)
+        .order('day_of_week')
+        .order('period')
+      if (timetableError) throw timetableError
+      const timetableClassIds = [...new Set(timetable.map((slot) => slot.class_id))]
+      const timetableClassesResult = timetableClassIds.length
+        ? await admin.from('classes').select('id, name, section').in('id', timetableClassIds)
+        : { data: [], error: null }
+      if (timetableClassesResult.error) throw timetableClassesResult.error
+      const timetableClassNames = new Map(
+        timetableClassesResult.data.map((item) => [item.id, `${item.name} ${item.section}`])
+      )
+      const scheduledSlots = timetable.map((slot) => ({
+        ...slot,
+        className: timetableClassNames.get(slot.class_id) ?? 'Class',
+      }))
       const classIds = classes.map((item) => item.id)
       const { data: students, error: studentsError } = classIds.length
         ? await admin
@@ -253,7 +272,7 @@ Deno.serve(async (request) => {
         : [{ data: [], error: null }, { data: [], error: null }]
       if (attendance.error) throw attendance.error
       if (marks.error) throw marks.error
-      return response({ role: activeSession.role, teacher, classes, students, attendance: attendance.data, marks: marks.data })
+      return response({ role: activeSession.role, teacher, classes, students, timetable: scheduledSlots, attendance: attendance.data, marks: marks.data })
     }
 
     const { data: students, error: studentsError } = await admin
@@ -265,7 +284,7 @@ Deno.serve(async (request) => {
     const studentIds = students.map((student) => student.id)
     const [fees, attendance, marks] = studentIds.length
       ? await Promise.all([
-        admin.from('fees').select('id, student_id, title, amount, amount_paid, due_date, status').in('student_id', studentIds).order('due_date', { ascending: false }),
+        admin.from('fees').select('id, student_id, title, amount, amount_paid, discount_total, late_fine_total, due_date, fee_month, status').in('student_id', studentIds).order('due_date', { ascending: false }),
         admin.from('attendance').select('student_id, attended_on, status').in('student_id', studentIds).order('attended_on', { ascending: false }).limit(30),
         admin.from('marks').select('student_id, subject, exam, score, max_score, exam_date').in('student_id', studentIds).order('exam_date', { ascending: false }).limit(30),
       ])
@@ -273,7 +292,27 @@ Deno.serve(async (request) => {
     if (fees.error) throw fees.error
     if (attendance.error) throw attendance.error
     if (marks.error) throw marks.error
-    return response({ role: activeSession.role, students, fees: fees.data, attendance: attendance.data, marks: marks.data })
+    const feeIds = fees.data.map((fee) => fee.id)
+    const { data: payments, error: paymentsError } = feeIds.length
+      ? await admin
+        .from('fee_payments')
+        .select('id, fee_id, amount, paid_on, receipt_no, remaining_balance')
+        .in('fee_id', feeIds)
+        .order('paid_on', { ascending: false })
+      : { data: [], error: null }
+    if (paymentsError) throw paymentsError
+    const feesById = new Map(fees.data.map((fee) => [fee.id, fee]))
+    return response({
+      role: activeSession.role,
+      students,
+      fees: fees.data,
+      payments: payments.map((payment) => ({
+        ...payment,
+        title: feesById.get(payment.fee_id)?.title ?? 'Fee payment',
+      })),
+      attendance: attendance.data,
+      marks: marks.data,
+    })
   } catch (error) {
     console.error('role-auth request failed:', error)
     return response({ error: error instanceof Error ? error.message : 'Account request failed.' }, 500)

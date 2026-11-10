@@ -8,7 +8,7 @@
 create extension if not exists "pgcrypto";
 
 -- ---------- 1. Enums ----------
-do $$ begin create type user_role as enum ('admin', 'teacher', 'student', 'parent');
+do $$ begin create type user_role as enum ('admin', 'accountant', 'teacher', 'student', 'parent');
 exception when duplicate_object then null; end $$;
 do $$ begin create type attendance_status as enum ('present', 'absent', 'late', 'excused');
 exception when duplicate_object then null; end $$;

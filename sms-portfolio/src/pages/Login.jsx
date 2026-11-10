@@ -140,7 +140,7 @@ export default function Login() {
           </div>
         </div>
 
-        <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl bg-white/55 p-1.5 sm:grid-cols-4" role="tablist" aria-label="Account role">
+        <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl bg-white/55 p-1.5 sm:grid-cols-5" role="tablist" aria-label="Account role">
           {roleOptions.map(({ id, label, icon: Icon }) => (
             <button key={id} type="button" role="tab" aria-selected={role === id} onClick={() => { setRole(id); setRegistering(false); setError('') }} className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-medium transition-colors ${role === id ? 'bg-night-900 text-white shadow-sm' : 'text-ink/60 hover:bg-white/70 hover:text-ink'}`}>
               <Icon className="h-4 w-4" />{label}

@@ -10,7 +10,9 @@ export default function Header({ collapsed, onToggleSidebar, onOpenMobile }) {
   const { nav, profile, signOut } = useRole()
   const { pathname } = useLocation()
   const [error, setError] = useState('')
-  const title = nav.find((item) => item.to === pathname)?.label ?? 'Dashboard'
+  const title = nav
+    .filter((item) => pathname === item.to || pathname.startsWith(`${item.to}/`))
+    .sort((a, b) => b.to.length - a.to.length)[0]?.label ?? 'Dashboard'
 
   return (
     <header className="glass relative z-20 flex h-[72px] shrink-0 items-center gap-3 rounded-none border-x-0 border-t-0 px-4 sm:px-6 lg:px-8">

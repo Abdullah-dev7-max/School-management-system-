@@ -4,6 +4,8 @@ import Layout from './components/layout/Layout.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Login from './pages/Login.jsx'
 import RoleDashboard from './pages/RoleDashboard.jsx'
+import StudentDashboard from './pages/StudentDashboard.jsx'
+import TeacherDashboard from './pages/TeacherDashboard.jsx'
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx'
 import Students from './pages/admin/Students.jsx'
 import Teachers from './pages/Teachers.jsx'
@@ -19,6 +21,7 @@ import { LogOut } from 'lucide-react'
 
 const roleHome = {
   admin: '/admin',
+  accountant: '/accountant',
   teacher: '/teacher-dashboard',
   student: '/student-dashboard',
   parent: '/parent',
@@ -85,18 +88,23 @@ export default function App() {
           <Route path="*" element={<Placeholder />} />
         </Route>
       </Route>
+      <Route path="accountant" element={<RequireRole role="accountant"><Layout /></RequireRole>}>
+        <Route index element={<Fees />} />
+        <Route path="fees" element={<Fees />} />
+      </Route>
       <Route path="teacher" element={<RequireRole role="teacher"><Layout /></RequireRole>}>
-        <Route index element={<RoleDashboard />} />
+        <Route index element={<TeacherDashboard />} />
         <Route path="attendance" element={<Attendance />} />
       </Route>
-      {['student', 'parent'].map((role) => (
-        <Route key={role} path={role} element={<RequireRole role={role}><Layout /></RequireRole>}>
-          <Route index element={<RoleDashboard />} />
-        </Route>
-      ))}
+      <Route path="student" element={<RequireRole role="student"><Layout /></RequireRole>}>
+        <Route index element={<StudentDashboard />} />
+      </Route>
+      <Route path="parent" element={<RequireRole role="parent"><Layout /></RequireRole>}>
+        <Route index element={<RoleDashboard />} />
+      </Route>
       {['teacher', 'student'].map((role) => (
         <Route key={`${role}-dashboard`} path={`${role}-dashboard`} element={<RequireRole role={role}><Layout /></RequireRole>}>
-          <Route index element={<RoleDashboard />} />
+          <Route index element={role === 'teacher' ? <TeacherDashboard /> : <StudentDashboard />} />
           {role === 'teacher' && <Route path="attendance" element={<Attendance />} />}
         </Route>
       ))}

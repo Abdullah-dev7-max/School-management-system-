@@ -34,6 +34,7 @@ In Supabase **SQL Editor**, run these scripts in order:
 10. `database/role_plaintext_password_migration.sql`
 11. `database/fee_management_migration.sql`
 12. `database/accountant_fee_collection_migration.sql`
+13. `database/accountant_rbac_migration.sql`
 
 These scripts are safe to rerun and do not reset existing tables. The
 production security migration removes only the former application's known
@@ -84,6 +85,12 @@ This configuration stores passwords in plaintext; use it only if this
 credential-storage risk is explicitly accepted.
 For accounts created before this migration, set an initial password from the
 teacher/student management form before the user signs in.
+
+To provision an accountant, add an unlinked `public.users` profile with the
+`accountant` role, then invite that matching email through Supabase Auth. The
+Auth trigger links the confirmed account to the profile. Accountant access is
+limited to fee collection and the student/class information required for that
+workflow; class fee structures remain admin-only.
 
 The parent dashboard shows only students explicitly linked through
 `students.parent_id`. Teacher/student dashboard requests are scoped by the
