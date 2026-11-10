@@ -176,22 +176,15 @@ export function RoleProvider({ children }) {
 
   const signInRole = useCallback(async (role, email, password) => {
     setProfileError(null)
-    setProfileLoading(true)
-    setProfile(null)
-    setSession(null)
-    try {
-      const { error: signOutError } = await supabase.auth.signOut()
-      if (signOutError) throw signOutError
-      clearRoleSession()
-      const data = await invokeRoleAuth({ action: 'login', role, email: email.trim(), password })
-      if (!data?.token || !data.profile) throw new Error('The account service returned an invalid session.')
-      saveRoleSession(data.token, data.profile)
-      setSession({ custom: true, token: data.token, user: { id: data.profile.id } })
-      setProfile(data.profile)
-      return data.profile
-    } finally {
-      setProfileLoading(false)
-    }
+    const { error: signOutError } = await supabase.auth.signOut()
+    if (signOutError) throw signOutError
+    clearRoleSession()
+    const data = await invokeRoleAuth({ action: 'login', role, email: email.trim(), password })
+    if (!data?.token || !data.profile) throw new Error('The account service returned an invalid session.')
+    saveRoleSession(data.token, data.profile)
+    setSession({ custom: true, token: data.token, user: { id: data.profile.id } })
+    setProfile(data.profile)
+    return data.profile
   }, [])
 
   const signOut = useCallback(async () => {
