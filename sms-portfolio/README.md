@@ -29,6 +29,7 @@ In Supabase **SQL Editor**, run these scripts in order:
 5. `database/production_security_migration.sql`
 6. `database/multirole_auth_migration.sql`
 7. `database/login_profile_link_migration.sql`
+8. `database/role_password_auth_migration.sql`
 
 These scripts are safe to rerun and do not reset existing tables. The
 production security migration removes only the former application's known
@@ -66,18 +67,22 @@ Supabase Auth account when their email matches and Supabase confirms the email.
 From the Admin dashboard's **Quick actions** or the Students and Teachers
 management pages, add student and teacher records directly to the database.
 Student enrollment creates a `public.users` profile and a linked
-`public.students` record, but does not create an Auth login. Teacher creation
-uses the `manage-accounts` Edge Function and Supabase's server-side Auth Admin
-API to create the teacher's Auth account, `public.users` profile, and linked
-`public.teachers` record. This avoids browser `signUp` rate limits and keeps
-the admin session intact. Deploy the function with the Supabase CLI and keep
-the service-role key server-side. Editing a teacher password uses the same
-admin-authorized function. Never store passwords in public database tables.
+`public.students` record, and teacher enrollment creates a linked
+`public.teachers` record. The authenticated administrator inserts these
+records directly through the Supabase client; neither flow calls Auth signup
+or the `manage-accounts` function. Teacher/student passwords are PBKDF2 hashes
+with per-account salts, never plaintext. Deploy the `role-auth` Edge Function
+with the Supabase CLI (`supabase functions deploy role-auth`). It verifies
+credentials and manages expiring server-side sessions; teacher/student
+dashboard data is returned only after the session is verified. Keep the
+service-role key server-side. Teacher password changes update the stored hash.
+For accounts created before this migration, set an initial password from the
+teacher/student management form before the user signs in.
 
 The parent dashboard shows only students explicitly linked through
-`students.parent_id`. Teacher, student, and parent portals are read-only; RLS
-limits each portal to the user's assigned classes, own student record, or
-linked children.
+`students.parent_id`. Teacher/student dashboard requests are scoped by the
+server-verified role session. The parent portal remains read-only and RLS
+limits it to linked children.
 
 Run the app:
 

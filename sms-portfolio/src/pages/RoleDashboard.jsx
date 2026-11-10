@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { CalendarCheck, GraduationCap, School, Wallet } from 'lucide-react'
 import { useRole } from '../context/RoleContext.jsx'
 import { useAsync } from '../hooks/useAsync.js'
@@ -102,10 +103,22 @@ function FamilyDashboard({ data }) {
 }
 
 export default function RoleDashboard() {
-  const { profile, roles } = useRole()
-  const dashboard = useAsync(() => fetchRoleDashboard(profile), [profile.id, profile.role])
+  const { profile, roles, session } = useRole()
+  const navigate = useNavigate()
+  const roleSession = window.localStorage.getItem('scholara.role.session')
+  const dashboard = useAsync(() => fetchRoleDashboard(profile, session?.token), [profile.id, profile.role, session?.token])
   const role = roles[profile.role]
 
+  useEffect(() => {
+    if (dashboard.error?.status === 401 || dashboard.error?.status === 403) {
+      window.localStorage.removeItem('scholara.role.session')
+      navigate('/login', { replace: true })
+    }
+  }, [dashboard.error, navigate])
+
+  if ((profile.role === 'teacher' || profile.role === 'student') && (!roleSession || !session?.token)) {
+    return <Navigate to="/login" replace />
+  }
   if (dashboard.error) return <ManagementError error={dashboard.error} onRetry={dashboard.reload} />
 
   return (

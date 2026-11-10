@@ -1,8 +1,28 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
+import { invokeRoleAuth } from '../lib/roleAuth.js'
 import { ROLES } from '../config/navigation.js'
 const RoleContext = createContext(null)
 const profileRequests = new Map()
+const roleSessionKey = 'scholara.role.session'
+
+function clearRoleSession() {
+  window.localStorage.removeItem(roleSessionKey)
+}
+
+function saveRoleSession(token, profile) {
+  window.localStorage.setItem(roleSessionKey, JSON.stringify({ token, profile }))
+}
+
+function readRoleSession() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(roleSessionKey) ?? 'null')
+    if (typeof saved?.token === 'string' && saved.profile && Object.hasOwn(ROLES, saved.profile.role)) return saved
+  } catch {
+    clearRoleSession()
+  }
+  return null
+}
 
 async function fetchUserProfile(user) {
   if (!profileRequests.has(user.id)) {
@@ -47,6 +67,7 @@ export function RoleProvider({ children }) {
     let active = true
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!active) return
+      if (window.localStorage.getItem(roleSessionKey)) return
       setSession(nextSession)
       if (!nextSession) {
         setProfile(null)
@@ -55,16 +76,34 @@ export function RoleProvider({ children }) {
       }
     })
 
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (!active) return
-      if (error) setProfileError(error)
-      setSession(data.session)
-      setInitialized(true)
-    }).catch((error) => {
-      if (!active) return
-      setProfileError(error)
-      setInitialized(true)
-    })
+    const initialize = async () => {
+      try {
+        const saved = readRoleSession()
+        if (saved) {
+          try {
+            const data = await invokeRoleAuth({ action: 'restore', token: saved.token })
+            if (!active) return
+            setSession({ custom: true, token: saved.token, user: { id: data.profile.id } })
+            setProfile(data.profile)
+            setInitialized(true)
+            return
+          } catch (error) {
+            if (error.status !== 401 && error.status !== 403) throw error
+            clearRoleSession()
+          }
+        }
+
+        const { data, error } = await supabase.auth.getSession()
+        if (!active) return
+        if (error) setProfileError(error)
+        setSession(data.session)
+      } catch (error) {
+        if (!active) return
+        setProfileError(error)
+      }
+      if (active) setInitialized(true)
+    }
+    initialize()
 
     return () => {
       active = false
@@ -74,6 +113,9 @@ export function RoleProvider({ children }) {
 
   useEffect(() => {
     let active = true
+    if (session?.custom) {
+      return () => { active = false }
+    }
     if (!session?.user) {
       setProfile(null)
       setProfileLoading(false)
@@ -101,6 +143,7 @@ export function RoleProvider({ children }) {
   }, [session?.user?.id])
 
   const signIn = useCallback(async (email, password) => {
+    clearRoleSession()
     setProfileError(null)
     setProfileLoading(true)
     let data
@@ -131,13 +174,49 @@ export function RoleProvider({ children }) {
     }
   }, [])
 
+  const signInRole = useCallback(async (role, email, password) => {
+    setProfileError(null)
+    setProfileLoading(true)
+    setProfile(null)
+    setSession(null)
+    try {
+      const { error: signOutError } = await supabase.auth.signOut()
+      if (signOutError) throw signOutError
+      clearRoleSession()
+      const data = await invokeRoleAuth({ action: 'login', role, email: email.trim(), password })
+      if (!data?.token || !data.profile) throw new Error('The account service returned an invalid session.')
+      saveRoleSession(data.token, data.profile)
+      setSession({ custom: true, token: data.token, user: { id: data.profile.id } })
+      setProfile(data.profile)
+      return data.profile
+    } finally {
+      setProfileLoading(false)
+    }
+  }, [])
+
   const signOut = useCallback(async () => {
+    if (!session) clearRoleSession()
+    if (session?.custom) {
+      let logoutError
+      try {
+        await invokeRoleAuth({ action: 'logout', token: session.token })
+      } catch (error) {
+        logoutError = error
+      } finally {
+        clearRoleSession()
+        setSession(null)
+        setProfile(null)
+        setProfileError(null)
+      }
+      if (logoutError) throw logoutError
+      return
+    }
     const { error } = await supabase.auth.signOut()
     if (error) throw error
     setSession(null)
     setProfile(null)
     setProfileError(null)
-  }, [])
+  }, [session])
 
   const updateProfileName = useCallback(async (fullName) => {
     if (!session?.user) throw new Error('You must be signed in to update your profile.')
@@ -164,10 +243,11 @@ export function RoleProvider({ children }) {
       profileLoading,
       profileError,
       signIn,
+      signInRole,
       signOut,
       updateProfileName,
     }
-  }, [profile, session, initialized, profileLoading, profileError, signIn, signOut, updateProfileName])
+  }, [profile, session, initialized, profileLoading, profileError, signIn, signInRole, signOut, updateProfileName])
 
   return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>
 }

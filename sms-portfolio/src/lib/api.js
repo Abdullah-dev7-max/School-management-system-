@@ -1,5 +1,7 @@
 import { supabase } from './supabaseClient.js'
 import { daysAgo, toISODate } from './format.js'
+import { hashPassword } from './password.js'
+import { invokeRoleAuth } from './roleAuth.js'
 
 /** supabase-js resolves with { data, error }. Turn errors into thrown exceptions. */
 function unwrap({ data, error }) {
@@ -36,53 +38,17 @@ export async function fetchInstituteSettings() {
   return data ?? { school_name: '', address: '', contact_email: '', academic_year: '' }
 }
 
-export async function fetchRoleDashboard(profile) {
-  if (profile.role === 'teacher') {
-    const teacher = unwrap(
-      await supabase.from('teachers').select('id, employee_code, subject').eq('user_id', profile.id).single()
-    )
-    const classes = unwrap(
-      await supabase
-        .from('classes')
-        .select('id, name, section, academic_year')
-        .eq('class_teacher_id', teacher.id)
-        .order('name')
-        .order('section')
-    )
-    const classIds = classes.map((item) => item.id)
-    const students = classIds.length
-      ? unwrap(
-          await supabase
-            .from('students')
-            .select('id, admission_no, roll_no, class_id, student:users!user_id(full_name)')
-            .in('class_id', classIds)
-            .eq('status', 'active')
-            .order('admission_no')
-        )
-      : []
-    const studentIds = students.map((student) => student.id)
-    const [attendance, marks] = studentIds.length
-      ? await Promise.all([
-          supabase.from('attendance').select('student_id, attended_on, status').in('student_id', studentIds).order('attended_on', { ascending: false }).limit(20),
-          supabase.from('marks').select('student_id, subject, exam, score, max_score, exam_date').in('student_id', studentIds).order('exam_date', { ascending: false }).limit(20),
-        ])
-      : [{ data: [], error: null }, { data: [], error: null }]
-    return {
-      role: profile.role,
-      teacher,
-      classes,
-      students,
-      attendance: unwrap(attendance),
-      marks: unwrap(marks),
-    }
+export async function fetchRoleDashboard(profile, sessionToken) {
+  if (profile.role === 'teacher' || profile.role === 'student') {
+    return invokeRoleAuth({ action: 'dashboard', token: sessionToken })
   }
 
-  if (profile.role === 'student' || profile.role === 'parent') {
+  if (profile.role === 'parent') {
     const students = unwrap(
       await supabase
         .from('students')
         .select('id, user_id, parent_id, admission_no, roll_no, status, student:users!user_id(full_name), classes(id, name, section, academic_year)')
-        .eq(profile.role === 'student' ? 'user_id' : 'parent_id', profile.id)
+        .eq('parent_id', profile.id)
         .order('admission_no')
     )
     const studentIds = students.map((student) => student.id)
@@ -131,7 +97,7 @@ export async function fetchStudentsPage() {
     supabase
       .from('students')
       .select(
-        'id, user_id, class_id, admission_no, roll_no, status, classes(id, name, section), student:users!user_id(id, full_name, email)'
+        'id, user_id, class_id, admission_no, roll_no, status, classes(id, name, section), student:users!user_id(id, full_name, email, phone)'
       )
       .order('admission_no'),
     supabase.from('classes').select('id, name, section').order('name').order('section'),
@@ -140,12 +106,14 @@ export async function fetchStudentsPage() {
 }
 
 export async function createStudent(values) {
+  const { passwordSalt, passwordHash } = await hashPassword(values.password)
   const { data: profile, error: profileError } = await supabase
     .from('users')
     .insert({
       full_name: values.fullName.trim(),
       email: values.email.trim().toLowerCase(),
       role: 'student',
+      phone: values.phone?.trim() || null,
     })
     .select('id')
     .single()
@@ -159,6 +127,8 @@ export async function createStudent(values) {
       roll_no: values.rollNo === '' || values.rollNo == null ? null : Number(values.rollNo),
       class_id: values.classId || null,
       status: values.status || 'active',
+      password_salt: passwordSalt,
+      password_hash: passwordHash,
     })
     .select('id')
     .single()
@@ -174,28 +144,38 @@ export async function createStudent(values) {
   return student
 }
 
-export async function updateStudent(student, { fullName, email, admissionNo, classId, rollNo, status }) {
+export async function updateStudent(student, { fullName, email, phone, password, admissionNo, classId, rollNo, status }) {
+  const update = {
+    admission_no: admissionNo,
+    class_id: classId || null,
+    roll_no: rollNo === '' ? null : Number(rollNo),
+    status,
+  }
+  if (password) {
+    const { passwordSalt, passwordHash } = await hashPassword(password)
+    update.password_salt = passwordSalt
+    update.password_hash = passwordHash
+  }
   unwrap(
     await supabase
       .from('users')
-      .update({ full_name: fullName, email })
+      .update({ full_name: fullName, email: email.trim().toLowerCase(), phone: phone || null })
       .eq('id', student.user_id)
   )
 
   const result = await supabase
     .from('students')
-    .update({
-      admission_no: admissionNo,
-      class_id: classId || null,
-      roll_no: rollNo === '' ? null : Number(rollNo),
-      status,
-    })
+    .update(update)
     .eq('id', student.id)
 
   if (result.error) {
     const rollback = await supabase
       .from('users')
-      .update({ full_name: student.student.full_name, email: student.student.email })
+      .update({
+        full_name: student.student.full_name,
+        email: student.student.email,
+        phone: student.student.phone,
+      })
       .eq('id', student.user_id)
     if (rollback.error) {
       throw new Error(`${result.error.message} The profile rollback also failed: ${rollback.error.message}`)
@@ -220,32 +200,57 @@ export async function fetchTeachersPage() {
 }
 
 export async function createTeacher(values) {
-  const { data, error } = await supabase.functions.invoke('manage-accounts', {
-    body: {
-      action: 'create_teacher',
-      ...values,
-      fullName: values.fullName.trim(),
+  const { passwordSalt, passwordHash } = await hashPassword(values.password)
+  const { data: profile, error: profileError } = await supabase
+    .from('users')
+    .insert({
+      full_name: values.fullName.trim(),
       email: values.email.trim().toLowerCase(),
-      employeeCode: values.employeeCode.trim(),
+      role: 'teacher',
+      phone: values.phone?.trim() || null,
+    })
+    .select('id')
+    .single()
+  if (profileError) throw new Error(profileError.message)
+
+  const { data: teacher, error: teacherError } = await supabase
+    .from('teachers')
+    .insert({
+      user_id: profile.id,
+      employee_code: values.employeeCode.trim(),
       subject: values.subject.trim(),
-      phone: values.phone?.trim() || '',
-    },
-  })
-  if (error) throw new Error(error.message)
-  if (data?.error) throw new Error(data.error)
-  return data
+      status: values.status || 'active',
+      password_salt: passwordSalt,
+      password_hash: passwordHash,
+    })
+    .select('id')
+    .single()
+  if (teacherError) {
+    const { error: cleanupError } = await supabase.from('users').delete().eq('id', profile.id)
+    if (cleanupError) {
+      throw new Error(`${teacherError.message} The unlinked profile cleanup also failed: ${cleanupError.message}`)
+    }
+    throw new Error(teacherError.message)
+  }
+  return teacher
 }
 
 export async function updateTeacher(teacher, { fullName, email, phone, employeeCode, subject, status, password }) {
+  const update = { employee_code: employeeCode, subject, status }
+  if (password) {
+    const { passwordSalt, passwordHash } = await hashPassword(password)
+    update.password_salt = passwordSalt
+    update.password_hash = passwordHash
+  }
   unwrap(
     await supabase
       .from('users')
-      .update({ full_name: fullName, email, phone: phone || null })
+      .update({ full_name: fullName, email: email.trim().toLowerCase(), phone: phone || null })
       .eq('id', teacher.user_id)
   )
   const result = await supabase
     .from('teachers')
-    .update({ employee_code: employeeCode, subject, status })
+    .update(update)
     .eq('id', teacher.id)
   if (result.error) {
     const rollback = await supabase
@@ -260,18 +265,6 @@ export async function updateTeacher(teacher, { fullName, email, phone, employeeC
       throw new Error(`${result.error.message} The profile rollback also failed: ${rollback.error.message}`)
     }
     throw new Error(result.error.message)
-  }
-
-  if (password) {
-    const { data, error } = await supabase.functions.invoke('manage-accounts', {
-      body: { action: 'update_teacher_password', teacherId: teacher.id, password },
-    })
-    if (error) {
-      throw new Error(`Teacher details were saved, but the password could not be updated: ${error.message}`)
-    }
-    if (data?.error) {
-      throw new Error(`Teacher details were saved, but the password could not be updated: ${data.error}`)
-    }
   }
 }
 

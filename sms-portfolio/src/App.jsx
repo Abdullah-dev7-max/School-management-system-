@@ -18,8 +18,8 @@ import { LogOut } from 'lucide-react'
 
 const roleHome = {
   admin: '/admin',
-  teacher: '/teacher',
-  student: '/student',
+  teacher: '/teacher-dashboard',
+  student: '/student-dashboard',
   parent: '/parent',
 }
 
@@ -59,7 +59,13 @@ export default function App() {
       </main>
     )
   }
-  if (!profile) return <Login />
+  if (!profile) {
+    return location.pathname === '/login' ? <Login /> : <Navigate to="/login" replace />
+  }
+  if (location.pathname === '/login') {
+    if (session?.custom && !window.localStorage.getItem('scholara.role.session')) return <Login />
+    return <Navigate to={roleHome[profile.role] ?? '/'} replace />
+  }
 
   return (
     <Routes>
@@ -80,6 +86,11 @@ export default function App() {
       </Route>
       {['teacher', 'student', 'parent'].map((role) => (
         <Route key={role} path={role} element={<RequireRole role={role}><Layout /></RequireRole>}>
+          <Route index element={<RoleDashboard />} />
+        </Route>
+      ))}
+      {['teacher', 'student'].map((role) => (
+        <Route key={`${role}-dashboard`} path={`${role}-dashboard`} element={<RequireRole role={role}><Layout /></RequireRole>}>
           <Route index element={<RoleDashboard />} />
         </Route>
       ))}

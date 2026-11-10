@@ -59,7 +59,7 @@ function PasswordResetModal({ initialEmail, onClose }) {
 }
 
 export default function Login() {
-  const { signIn, signOut } = useRole()
+  const { signIn, signInRole, signOut } = useRole()
   const navigate = useNavigate()
   const [role, setRole] = useState('admin')
   const [email, setEmail] = useState('')
@@ -80,7 +80,7 @@ export default function Login() {
     setMessage('')
     let authenticated = false
     try {
-      if (!email.includes('@')) throw new Error('Enter the email address linked to your institute account. Supabase login does not support usernames.')
+      if (!email.includes('@')) throw new Error('Enter the email address linked to your institute account.')
       if (registering) {
         if (role !== 'admin') throw new Error('Only the initial administrator account can be set up here.')
         if (password.length < 12) throw new Error('Use a password with at least 12 characters.')
@@ -97,12 +97,17 @@ export default function Login() {
         setRegistering(false)
       } else {
         setRememberSession(remember)
-        const profile = await signIn(email, password)
-        authenticated = true
-        if (profile.role !== role) {
-          throw new Error(`This account belongs to the ${ROLES[profile.role]?.label ?? 'other'} role. Select the matching role and sign in again.`)
+        if (role === 'teacher' || role === 'student') {
+          await signInRole(role, email, password)
+          navigate(role === 'teacher' ? '/teacher-dashboard' : '/student-dashboard', { replace: true })
+        } else {
+          const profile = await signIn(email, password)
+          authenticated = true
+          if (profile.role !== role) {
+            throw new Error(`This account belongs to the ${ROLES[profile.role]?.label ?? 'other'} role. Select the matching role and sign in again.`)
+          }
+          navigate(`/${profile.role}`, { replace: true })
         }
-        navigate(`/${profile.role}`, { replace: true })
       }
     } catch (submitError) {
       if (authenticated) {
@@ -172,7 +177,9 @@ export default function Login() {
                 <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} className="h-4 w-4 rounded border-ink/20 accent-lilac-600" />
                 Remember me
               </label>
-              <button type="button" onClick={() => { setResetOpen(true); setError('') }} className="font-medium text-lilac-700 hover:underline">Forgot Password?</button>
+              {role !== 'teacher' && role !== 'student' && (
+                <button type="button" onClick={() => { setResetOpen(true); setError('') }} className="font-medium text-lilac-700 hover:underline">Forgot Password?</button>
+              )}
             </div>
           )}
 

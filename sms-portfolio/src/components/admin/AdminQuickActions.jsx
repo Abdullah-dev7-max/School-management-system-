@@ -48,6 +48,8 @@ function ActionForm({ action, students, classes, onClose, onSaved }) {
         await createStudent({
           fullName: form.fullName.trim(),
           email: form.email.trim(),
+          phone: form.phone.trim(),
+          password: form.password,
           admissionNo: form.admissionNo.trim(),
           classId: form.classId,
           rollNo: form.rollNo,
@@ -96,7 +98,9 @@ function ActionForm({ action, students, classes, onClose, onSaved }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Full name" name="fullName" value={form.fullName} onChange={change} maxLength={120} required autoFocus />
             <Field label="Email" name="email" type="email" autoComplete="email" value={form.email} onChange={change} required />
+            <Field label="Phone number" name="phone" type="tel" value={form.phone} onChange={change} />
           </div>
+          <Field label="Initial password (at least 12 characters)" name="password" type="password" autoComplete="new-password" minLength={12} value={form.password} onChange={change} required />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Admission number" name="admissionNo" value={form.admissionNo} onChange={change} required />
             <Field label="Roll number" name="rollNo" type="number" min="1" step="1" value={form.rollNo} onChange={change} />

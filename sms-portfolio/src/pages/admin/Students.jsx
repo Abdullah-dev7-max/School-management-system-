@@ -24,6 +24,8 @@ function StudentDialog({ student, classes, onClose, onSave }) {
   const [form, setForm] = useState(() => ({
     fullName: student?.student?.full_name ?? '',
     email: student?.student?.email ?? '',
+    phone: student?.student?.phone ?? '',
+    password: '',
     admissionNo: student?.admission_no ?? '',
     classId: student?.class_id ?? '',
     rollNo: student?.roll_no ?? '',
@@ -96,6 +98,26 @@ function StudentDialog({ student, classes, onClose, onSave }) {
           <label className="block text-sm font-medium">
             Email
             <input name="email" type="email" value={form.email} onChange={change} required maxLength={255} className={FIELD} />
+          </label>
+
+          <label className="block text-sm font-medium">
+            Phone
+            <input name="phone" type="tel" value={form.phone} onChange={change} maxLength={32} className={FIELD} />
+          </label>
+
+          <label className="block text-sm font-medium">
+            {student ? 'New password (optional)' : 'Initial password (at least 12 characters)'}
+            <input
+              name="password"
+              type="password"
+              value={form.password}
+              onChange={change}
+              required={!student}
+              minLength={form.password ? 12 : undefined}
+              autoComplete="new-password"
+              placeholder={student ? 'Leave blank to keep current password' : undefined}
+              className={FIELD}
+            />
           </label>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -191,6 +213,8 @@ export default function Students() {
       ...form,
       fullName: form.fullName.trim(),
       email: form.email.trim(),
+      phone: form.phone.trim(),
+      password: form.password,
       admissionNo: form.admissionNo.trim(),
     }
     if (editing) await updateStudent(editing, values)
