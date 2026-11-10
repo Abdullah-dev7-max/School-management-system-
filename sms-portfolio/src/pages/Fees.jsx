@@ -307,8 +307,8 @@ function BulkVoucherDialog({ classes, onSave, onClose }) {
   )
 }
 
-function PaymentDialog({ fee, student, onSave, onClose }) {
-  const [amount, setAmount] = useState('0')
+function PaymentDialog({ fee, student, initialAmount = 0, onSave, onClose }) {
+  const [amount, setAmount] = useState(String(initialAmount))
   const [discount, setDiscount] = useState('0')
   const [lateFine, setLateFine] = useState('0')
   const [paymentMode, setPaymentMode] = useState('Cash')
@@ -427,6 +427,9 @@ function StudentHistoryDialog({ student, onClose }) {
 function ReceiptDialog({ receipt, student, schoolName, month, onClose }) {
   if (!receipt || !student) return null
   const print = () => window.print()
+  const paymentTime = receipt.created_at
+    ? new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit', second: '2-digit' }).format(new Date(receipt.created_at))
+    : new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit', second: '2-digit' }).format(new Date())
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-night-950/60 p-4">
       <section role="dialog" aria-modal="true" aria-labelledby="receipt-title" className="w-full max-w-xl rounded-3xl bg-white p-5 shadow-2xl sm:p-8">
@@ -447,6 +450,7 @@ function ReceiptDialog({ receipt, student, schoolName, month, onClose }) {
             <dt className="text-ink/55">Class</dt><dd className="text-right">{student.className}</dd>
             <dt className="text-ink/55">Fee month</dt><dd className="text-right">{monthLabel(month)}</dd>
             <dt className="text-ink/55">Payment date</dt><dd className="text-right">{formatDate(receipt.paid_on)}</dd>
+            <dt className="text-ink/55">Payment time</dt><dd className="text-right">{paymentTime}</dd>
             <dt className="text-ink/55">Payment mode</dt><dd className="text-right">{receipt.payment_mode}</dd>
           </dl>
           <div className="mt-6 space-y-3 border-t border-dashed border-ink/25 pt-4 text-sm">
@@ -470,6 +474,9 @@ export default function Fees() {
   const [month, setMonth] = useState(currentMonth)
   const [activeTab, setActiveTab] = useState('ledger')
   const [search, setSearch] = useState('')
+  const [classFilter, setClassFilter] = useState('')
+  const [nameFilter, setNameFilter] = useState('')
+  const [rollFilter, setRollFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [classSettingsOpen, setClassSettingsOpen] = useState(false)
   const [voucherOpen, setVoucherOpen] = useState(false)
@@ -508,6 +515,17 @@ export default function Fees() {
       return matchesStatus && matchesSearch
     })
   }, [data?.fees, search, statusFilter, studentsById])
+  const quickMatches = useMemo(() => {
+    const name = nameFilter.trim().toLowerCase()
+    const roll = rollFilter.trim().toLowerCase()
+    if (!classFilter && !name && !roll) return []
+    return (data?.students ?? []).filter((student) => {
+      const matchesClass = !classFilter || student.class_id === classFilter
+      const matchesName = !name || student.name.toLowerCase().includes(name)
+      const matchesRoll = !roll || String(student.roll_no ?? '').toLowerCase().includes(roll)
+      return matchesClass && matchesName && matchesRoll
+    })
+  }, [data?.students, classFilter, nameFilter, rollFilter])
 
   const onSaveClassFee = async (classId, monthlyFee, dueDay) => {
     await updateClassFee(classId, monthlyFee, dueDay)
@@ -572,6 +590,71 @@ export default function Fees() {
             <StatCard icon={ReceiptText} label="Pending receivables" value={pkr(pending)} hint="Remaining balance across all active invoices" accent="from-amber-500 to-amber-300" />
             <StatCard icon={Users} label="Defaulter accounts" value={defaulterCount} hint="Unique students past due with a balance" accent="from-rose-500 to-rose-300" />
           </div>
+
+          <GlassCard className="p-5 sm:p-6">
+            <SectionHeader title="Quick student fee collection" description={`Find a student by class, name, or roll number and manage their ${monthLabel(month)} fee.`} />
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <label className="block text-sm font-medium">Class
+                <select value={classFilter} onChange={(event) => setClassFilter(event.target.value)} className={FIELD}>
+                  <option value="">All classes</option>
+                  {data.classes.map((classItem) => <option key={classItem.id} value={classItem.id}>{classItem.name} {classItem.section}</option>)}
+                </select>
+              </label>
+              <label className="block text-sm font-medium">Student name
+                <input value={nameFilter} onChange={(event) => setNameFilter(event.target.value)} placeholder="Enter student name" className={FIELD} />
+              </label>
+              <label className="block text-sm font-medium">Roll number
+                <input value={rollFilter} onChange={(event) => setRollFilter(event.target.value)} placeholder="Enter roll number" className={FIELD} />
+              </label>
+            </div>
+            {(classFilter || nameFilter.trim() || rollFilter.trim()) && (
+              <div className="mt-4 space-y-3">
+                {quickMatches.map((student) => {
+                  const invoice = data.fees.find((fee) => fee.student_id === student.id)
+                  const balance = Number(invoice?.balance ?? 0)
+                  const paid = Boolean(invoice) && balance === 0
+                  const partial = Boolean(invoice) && !paid && (
+                    Number(invoice.amount_paid) > 0 || Number(invoice.discount_total ?? 0) > 0
+                  )
+                  const latestPayment = paid
+                    ? [...(invoice.payments ?? [])].sort((a, b) => b.paid_on.localeCompare(a.paid_on))[0]
+                    : null
+                  return (
+                    <div key={student.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-ink/5 bg-white/70 p-4">
+                      <div>
+                        <p className="font-semibold">{student.name}</p>
+                        <p className="mt-1 text-sm text-ink/55">Roll {student.roll_no ?? '–'} · Admission {student.admission_no ?? '–'} · {student.className}</p>
+                        <p className="mt-1 text-sm">{invoice ? `${monthLabel(month)} fee · ${pkr(Number(invoice.amount) + Number(invoice.late_fine_total ?? 0))}` : `${monthLabel(month)} fee invoice not generated`}</p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {paid ? (
+                          <>
+                            <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-800">Paid</span>
+                            {latestPayment && <button type="button" onClick={() => setReceiptInfo({
+                              receipt: {
+                                ...latestPayment,
+                                amount_paid: latestPayment.amount,
+                                remaining_balance: latestPayment.remaining_balance ?? 0,
+                              },
+                              student,
+                              month,
+                            })} className="inline-flex h-9 items-center gap-2 rounded-lg border border-ink/10 bg-white px-3 text-xs font-medium hover:bg-lilac-50"><Printer className="h-4 w-4" />Print slip</button>}
+                          </>
+                        ) : (
+                          <>
+                            <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${partial ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'}`}>{partial ? 'Partial' : 'Not paid'}</span>
+                            {invoice && balance > 0 && <button type="button" onClick={() => setPaymentFeeId(invoice.id)} className="rounded-lg bg-night-900 px-3 py-2 text-xs font-medium text-white">{partial ? 'Pay balance' : 'Mark paid'}</button>}
+                            {!invoice && <button type="button" onClick={() => { setVoucherStudentId(student.id); setVoucherOpen(true) }} className="rounded-lg border border-ink/10 bg-white px-3 py-2 text-xs font-medium hover:bg-lilac-50">Issue fee</button>}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+                {!quickMatches.length && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">No student matches these filters.</p>}
+              </div>
+            )}
+          </GlassCard>
 
           <div className="flex gap-6 border-b border-ink/10">
             <button type="button" onClick={() => setActiveTab('ledger')} className={`border-b-2 pb-3 text-sm font-semibold ${activeTab === 'ledger' ? 'border-lilac-600 text-night-900' : 'border-transparent text-ink/55 hover:text-ink'}`}>Fee invoices & ledger</button>
@@ -684,7 +767,7 @@ export default function Fees() {
           onClose={() => setTakeFeeOpen(false)}
         />
       )}
-      {selectedPaymentFee && selectedPaymentStudent && <PaymentDialog fee={selectedPaymentFee} student={selectedPaymentStudent} onSave={submitPayment} onClose={() => setPaymentFeeId('')} />}
+      {selectedPaymentFee && selectedPaymentStudent && <PaymentDialog fee={selectedPaymentFee} student={selectedPaymentStudent} initialAmount={selectedPaymentFee.balance} onSave={submitPayment} onClose={() => setPaymentFeeId('')} />}
       {selectedHistoryStudent && <StudentHistoryDialog student={selectedHistoryStudent} onClose={() => setHistoryStudentId('')} />}
       {receiptInfo && <ReceiptDialog receipt={receiptInfo.receipt} student={receiptInfo.student} schoolName={data?.schoolName ?? 'School'} month={receiptInfo.month} onClose={() => setReceiptInfo(null)} />}
     </div>

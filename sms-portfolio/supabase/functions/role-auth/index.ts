@@ -610,6 +610,53 @@ Deno.serve(async (request) => {
     if (studentsError) throw studentsError
     const studentIds = students.map((student) => student.id)
     const classIds = [...new Set(students.map((student) => student.class_id).filter(Boolean))]
+    if (studentIds.length) {
+      const { data: classFees, error: classFeesError } = classIds.length
+        ? await admin
+          .from('classes')
+          .select('id, monthly_fee, fee_due_day')
+          .in('id', classIds)
+        : { data: [], error: null }
+      if (classFeesError) throw classFeesError
+
+      const now = new Date()
+      const year = now.getUTCFullYear()
+      const monthIndex = now.getUTCMonth()
+      const feeMonth = `${year}-${String(monthIndex + 1).padStart(2, '0')}-01`
+      const monthEndDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate()
+      const classFeeById = new Map(classFees.map((classFee) => [classFee.id, classFee]))
+      const { data: existingInvoices, error: invoicesError } = await admin
+        .from('fees')
+        .select('student_id')
+        .in('student_id', studentIds)
+        .eq('fee_month', feeMonth)
+      if (invoicesError) throw invoicesError
+      const invoicedStudentIds = new Set(existingInvoices.map((invoice) => invoice.student_id))
+      const monthlyInvoices = students.flatMap((student) => {
+        const classFee = classFeeById.get(student.class_id)
+        if (
+          invoicedStudentIds.has(student.id)
+          || !classFee
+          || Number(classFee.monthly_fee) <= 0
+          || !Number.isInteger(classFee.fee_due_day)
+          || classFee.fee_due_day < 1
+        ) return []
+        const dueDay = Math.min(classFee.fee_due_day, monthEndDay)
+        return [{
+          student_id: student.id,
+          title: `Monthly tuition - ${new Intl.DateTimeFormat('en', { month: 'short', timeZone: 'UTC' }).format(now)} ${year}`,
+          amount: classFee.monthly_fee,
+          amount_paid: 0,
+          due_date: `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(dueDay).padStart(2, '0')}`,
+          fee_month: feeMonth,
+          status: 'pending',
+        }]
+      })
+      if (monthlyInvoices.length) {
+        const { error: insertInvoicesError } = await admin.from('fees').insert(monthlyInvoices)
+        if (insertInvoicesError && insertInvoicesError.code !== '23505') throw insertInvoicesError
+      }
+    }
     const [fees, attendance, marks, notes, timetable, announcements] = studentIds.length
       ? await Promise.all([
         admin.from('fees').select('id, student_id, title, amount, amount_paid, discount_total, late_fine_total, due_date, fee_month, status').in('student_id', studentIds).order('due_date', { ascending: false }),

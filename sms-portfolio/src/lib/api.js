@@ -481,7 +481,7 @@ export async function fetchFeesPage(month) {
     historyFees.length
       ? await supabase
           .from('fee_payments')
-          .select('id, fee_id, amount, discount, late_fine, payment_mode, paid_on, receipt_no, remaining_balance')
+          .select('id, fee_id, amount, discount, late_fine, payment_mode, paid_on, receipt_no, remaining_balance, created_at')
           .in('fee_id', historyFees.map((fee) => fee.id))
       : { data: [], error: null }
   )
@@ -609,7 +609,12 @@ export async function recordFeePayment(fee, { amount, discount, lateFine, paidOn
     p_payment_mode: paymentMode,
   })
   if (error) throw new Error(error.message)
-  return data
+  const payment = unwrap(await supabase
+    .from('fee_payments')
+    .select('created_at')
+    .eq('id', data.payment_id)
+    .single())
+  return { ...data, created_at: payment.created_at }
 }
 
 export async function fetchMarksPage(classId, subject, exam, sessionToken = null) {
