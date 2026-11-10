@@ -37,6 +37,8 @@ In Supabase **SQL Editor**, run these scripts in order:
 13. `database/fee_management_migration.sql`
 14. `database/accountant_fee_collection_migration.sql`
 15. `database/class_announcements_migration.sql`
+16. `database/remove_parent_portal_migration.sql`
+17. `database/credential_access_migration.sql`
 
 These scripts are safe to rerun and do not reset existing tables. The
 production security migration removes only the former application's known
