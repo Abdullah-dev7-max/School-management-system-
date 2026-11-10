@@ -412,7 +412,7 @@ export async function fetchFeesPage(month) {
     studentRows.length
       ? await supabase
           .from('users')
-          .select('id, full_name')
+          .select('id, full_name, phone')
           .in('id', studentRows.map((student) => student.user_id))
       : { data: [], error: null }
   )
@@ -421,6 +421,7 @@ export async function fetchFeesPage(month) {
   const students = studentRows.map((student) => ({
     ...student,
     name: profilesById[student.user_id]?.full_name ?? 'Unknown student',
+    phone: profilesById[student.user_id]?.phone ?? '',
     className: classesById[student.class_id]
       ? `${classesById[student.class_id].name} ${classesById[student.class_id].section}`
       : 'Unassigned',
@@ -429,7 +430,7 @@ export async function fetchFeesPage(month) {
   const historyResult = studentRows.length
     ? await supabase
         .from('fees')
-        .select('id, student_id, title, amount, amount_paid, discount_total, late_fine_total, due_date, fee_month')
+        .select('id, student_id, title, amount, amount_paid, discount_total, late_fine_total, due_date, fee_month, status')
         .in('student_id', studentIds)
     : { data: [], error: null }
   const historyFees = unwrap(historyResult)
@@ -487,6 +488,18 @@ export async function fetchFeesPage(month) {
   }))
   const activeInvoices = historyFees.map((fee) => ({ ...fee, balance: balanceOf(fee) }))
   const defaulters = activeInvoices.filter((fee) => fee.due_date < currentDate && fee.balance > 0)
+  const invoicesByStudent = {}
+  activeInvoices.forEach((fee) => {
+    const invoices = invoicesByStudent[fee.student_id] ?? []
+    const paid = Number(fee.amount_paid) > 0 || Number(fee.discount_total ?? 0) > 0
+    invoices.push({
+      ...fee,
+      month: (fee.fee_month ?? fee.due_date).slice(0, 7),
+      status: fee.balance === 0 ? 'Paid' : paid ? 'Partial' : 'Unpaid',
+    })
+    invoicesByStudent[fee.student_id] = invoices
+  })
+  Object.values(invoicesByStudent).forEach((invoices) => invoices.sort((a, b) => b.due_date.localeCompare(a.due_date)))
   const paymentRecords = allPayments.map((payment) => {
     const fee = historyFeeById[payment.fee_id]
     return {
@@ -499,7 +512,11 @@ export async function fetchFeesPage(month) {
 
   return {
     classes,
-    students: students.map((student) => ({ ...student, history: histories[student.id] ?? [] })),
+    students: students.map((student) => ({
+      ...student,
+      history: histories[student.id] ?? [],
+      invoices: invoicesByStudent[student.id] ?? [],
+    })),
     fees: feeRecords,
     payments: paymentRecords.sort((a, b) => b.paid_on.localeCompare(a.paid_on)),
     schoolName: setting?.school_name || 'School',

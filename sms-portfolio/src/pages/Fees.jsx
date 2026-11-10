@@ -101,8 +101,8 @@ function ClassFeeSettings({ classes, onSave, onClose }) {
   )
 }
 
-function IssueVoucherDialog({ students, onSave, onClose }) {
-  const [studentId, setStudentId] = useState('')
+function IssueVoucherDialog({ students, initialStudentId = '', onSave, onClose }) {
+  const [studentId, setStudentId] = useState(initialStudentId)
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
   const [dueDate, setDueDate] = useState(toISODate())
@@ -151,6 +151,106 @@ function IssueVoucherDialog({ students, onSave, onClose }) {
           <button type="submit" disabled={saving || !students.length} className={BUTTON}>{saving ? 'Saving…' : 'Issue voucher'}</button>
         </div>
       </form>
+    </DialogFrame>
+  )
+}
+
+function TakeFeeCounterDialog({ students, classes, onCollect, onIssueVoucher, onClose }) {
+  const [studentQuery, setStudentQuery] = useState('')
+  const [classId, setClassId] = useState('')
+  const [student, setStudent] = useState(null)
+  const query = studentQuery.trim().toLowerCase()
+  const matches = query
+    ? students.filter((item) =>
+        (!classId || item.class_id === classId)
+        && [item.name, item.roll_no, item.admission_no]
+          .some((value) => String(value ?? '').toLowerCase().includes(query))
+      ).slice(0, 8)
+    : []
+
+  const chooseStudent = (item) => {
+    setStudent(item)
+    setStudentQuery(item.name)
+  }
+
+  return (
+    <DialogFrame title="Take fee · Counter" description="Find a student, review their complete fee ledger, and record a collection." onClose={onClose}>
+      <div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <label className="block text-sm font-medium">Search by name, roll number, or admission number
+          <span className="relative mt-1.5 block">
+            <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
+            <input value={studentQuery} onChange={(event) => { setStudentQuery(event.target.value); setStudent(null) }} autoFocus placeholder="Enter student name or ID…" className={`${FIELD} pl-10`} />
+          </span>
+        </label>
+        <label className="block text-sm font-medium">Class
+          <select value={classId} onChange={(event) => { setClassId(event.target.value); setStudent(null) }} className={`${FIELD} sm:min-w-48`}>
+            <option value="">All classes</option>
+            {classes.map((classItem) => <option key={classItem.id} value={classItem.id}>{classItem.name} {classItem.section}</option>)}
+          </select>
+        </label>
+      </div>
+
+      {!!matches.length && !student && (
+        <div className="mt-2 max-h-52 overflow-y-auto rounded-xl border border-ink/10 bg-white">
+          {matches.map((item) => (
+            <button key={item.id} type="button" onClick={() => chooseStudent(item)} className="block w-full border-b border-ink/5 px-4 py-3 text-left last:border-0 hover:bg-lilac-50">
+              <span className="block text-sm font-semibold">{item.name}</span>
+              <span className="mt-0.5 block text-xs text-ink/55">Roll {item.roll_no ?? '–'} · Adm {item.admission_no ?? '–'} · {item.className}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {query && !student && !matches.length && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">No student matched that name or number.</p>}
+
+      {student && (
+        <div className="mt-5 space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl bg-white/70 p-4">
+            <div>
+              <p className="font-semibold">{student.name}</p>
+              <p className="mt-1 text-sm text-ink/55">Roll {student.roll_no ?? '–'} · Admission {student.admission_no ?? '–'} · {student.className}</p>
+              {student.phone && <p className="mt-1 text-xs text-ink/50">{student.phone}</p>}
+            </div>
+            <button type="button" onClick={() => onIssueVoucher(student)} className="rounded-xl border border-ink/10 bg-white px-3 py-2 text-xs font-medium hover:bg-lilac-50">Issue voucher</button>
+          </div>
+
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold">Fee history & outstanding invoices</h3>
+              <span className="text-xs text-ink/55">{student.invoices.length} invoices</span>
+            </div>
+            <div className="max-h-[42vh] space-y-2 overflow-y-auto pr-1">
+              {student.invoices.map((invoice) => (
+                <div key={invoice.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink/5 bg-white/60 p-3">
+                  <div>
+                    <p className="text-sm font-medium">{monthLabel(invoice.month)} · {invoice.title}</p>
+                    <p className="mt-1 text-xs text-ink/55">Due {formatDate(invoice.due_date)} · {invoice.status} · Total {pkr(Number(invoice.amount) + Number(invoice.late_fine_total ?? 0))}</p>
+                    <p className="mt-0.5 text-xs text-ink/55">Paid {pkr(invoice.amount_paid)} · Discount {pkr(invoice.discount_total)} · Balance {pkr(invoice.balance)}</p>
+                  </div>
+                  {invoice.balance > 0 && (
+                    <button type="button" onClick={() => onCollect(invoice)} className="rounded-lg bg-night-900 px-3 py-2 text-xs font-medium text-white">Take fee</button>
+                  )}
+                </div>
+              ))}
+              {!student.invoices.length && <p className="rounded-xl bg-white/60 p-4 text-sm text-ink/55">No invoices found for this student. Issue a voucher or configure the class fee and generate monthly vouchers.</p>}
+            </div>
+          </div>
+          <div>
+            <h3 className="mb-2 text-sm font-semibold">Previous payments ({student.history.length})</h3>
+            <div className="max-h-40 space-y-2 overflow-y-auto pr-1">
+              {student.history.map((payment) => (
+                <div key={payment.id} className="flex flex-wrap justify-between gap-2 rounded-xl bg-white/60 px-3 py-2 text-xs">
+                  <span>{formatDate(payment.paid_on)} · {payment.month?.length === 7 ? monthLabel(payment.month) : payment.month} · Receipt {payment.receipt_no ?? '–'}</span>
+                  <strong>{pkr(payment.amount)}</strong>
+                </div>
+              ))}
+              {!student.history.length && <p className="rounded-xl bg-white/60 p-3 text-xs text-ink/55">No payments have been recorded.</p>}
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button type="button" onClick={() => onIssueVoucher(student)} className={BUTTON}><Plus className="h-4 w-4" />Issue another voucher</button>
+          </div>
+        </div>
+      )}
     </DialogFrame>
   )
 }
@@ -300,7 +400,18 @@ function StudentHistoryDialog({ student, onClose }) {
   if (!student) return null
   return (
     <DialogFrame title={`${student.name} · Fee history`} description={`Roll ${student.roll_no ?? '–'} · Admission ${student.admission_no ?? '–'} · ${student.className}`} onClose={onClose}>
-      <div className="mt-5 max-h-[65vh] overflow-auto rounded-2xl bg-white/60">
+      <h3 className="mt-5 text-sm font-semibold">Invoice ledger</h3>
+      <div className="mt-2 max-h-56 overflow-auto rounded-2xl bg-white/60">
+        <table className="w-full min-w-[700px] text-left text-sm">
+          <thead className="sticky top-0 bg-white/90 text-xs text-ink/55"><tr>{['Month', 'Invoice', 'Due date', 'Total', 'Paid', 'Balance', 'Status'].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead>
+          <tbody className="divide-y divide-ink/5">
+            {student.invoices.map((invoice) => <tr key={invoice.id}><td className="px-4 py-3">{monthLabel(invoice.month)}</td><td className="px-4 py-3">{invoice.title}</td><td className="px-4 py-3">{formatDate(invoice.due_date)}</td><td className="px-4 py-3">{pkr(Number(invoice.amount) + Number(invoice.late_fine_total ?? 0))}</td><td className="px-4 py-3">{pkr(invoice.amount_paid)}</td><td className="px-4 py-3">{pkr(invoice.balance)}</td><td className="px-4 py-3">{invoice.status}</td></tr>)}
+            {!student.invoices.length && <tr><td colSpan="7" className="px-4 py-8 text-center text-ink/50">No fee invoices found.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      <h3 className="mt-5 text-sm font-semibold">Payment history</h3>
+      <div className="mt-2 max-h-[42vh] overflow-auto rounded-2xl bg-white/60">
         <table className="w-full min-w-[900px] text-left text-sm">
           <thead className="sticky top-0 bg-white/90 text-xs text-ink/55"><tr>{['Payment date', 'Month', 'Amount received', 'Discount', 'Late fine', 'Mode', 'Remaining fee', 'Receipt no.'].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead>
           <tbody className="divide-y divide-ink/5">
@@ -332,6 +443,7 @@ function ReceiptDialog({ receipt, student, schoolName, month, onClose }) {
           <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
             <dt className="text-ink/55">Student</dt><dd className="text-right font-semibold">{student.name}</dd>
             <dt className="text-ink/55">Roll Number</dt><dd className="text-right">{student.roll_no ?? '–'}</dd>
+            <dt className="text-ink/55">Admission Number</dt><dd className="text-right">{student.admission_no ?? '–'}</dd>
             <dt className="text-ink/55">Class</dt><dd className="text-right">{student.className}</dd>
             <dt className="text-ink/55">Fee month</dt><dd className="text-right">{monthLabel(month)}</dd>
             <dt className="text-ink/55">Payment date</dt><dd className="text-right">{formatDate(receipt.paid_on)}</dd>
@@ -361,6 +473,8 @@ export default function Fees() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [classSettingsOpen, setClassSettingsOpen] = useState(false)
   const [voucherOpen, setVoucherOpen] = useState(false)
+  const [takeFeeOpen, setTakeFeeOpen] = useState(false)
+  const [voucherStudentId, setVoucherStudentId] = useState('')
   const [bulkVoucherOpen, setBulkVoucherOpen] = useState(false)
   const [paymentFeeId, setPaymentFeeId] = useState('')
   const [historyStudentId, setHistoryStudentId] = useState('')
@@ -440,9 +554,12 @@ export default function Fees() {
       <GlassCard className="p-5 sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <SectionHeader title="Fee collection" description="Manage school receivables, concessions, and payment transactions." />
-          <label className="block min-w-48 text-sm font-medium">Fee month
-            <input type="month" value={month} min="2000-01" max={currentMonth()} onChange={(event) => event.target.value && setMonth(event.target.value)} className={FIELD} />
-          </label>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="block min-w-48 text-sm font-medium">Fee month
+              <input type="month" value={month} min="2000-01" max={currentMonth()} onChange={(event) => event.target.value && setMonth(event.target.value)} className={FIELD} />
+            </label>
+            <button type="button" onClick={() => setTakeFeeOpen(true)} className={BUTTON}><Wallet className="h-4 w-4" />Take Fee</button>
+          </div>
         </div>
       </GlassCard>
 
@@ -556,8 +673,17 @@ export default function Fees() {
         </>
       )}
       {classSettingsOpen && data && <ClassFeeSettings classes={data.classes} onSave={onSaveClassFee} onClose={() => setClassSettingsOpen(false)} />}
-      {voucherOpen && data && <IssueVoucherDialog students={data.students} onSave={page.reload} onClose={() => setVoucherOpen(false)} />}
+      {voucherOpen && data && <IssueVoucherDialog key={voucherStudentId || 'manual'} students={data.students} initialStudentId={voucherStudentId} onSave={page.reload} onClose={() => { setVoucherOpen(false); setVoucherStudentId('') }} />}
       {bulkVoucherOpen && data && <BulkVoucherDialog classes={data.classes} onSave={onGenerateVouchers} onClose={() => setBulkVoucherOpen(false)} />}
+      {takeFeeOpen && data && (
+        <TakeFeeCounterDialog
+          students={data.students}
+          classes={data.classes}
+          onCollect={(fee) => { setTakeFeeOpen(false); setPaymentFeeId(fee.id) }}
+          onIssueVoucher={(student) => { setTakeFeeOpen(false); setVoucherStudentId(student.id); setVoucherOpen(true) }}
+          onClose={() => setTakeFeeOpen(false)}
+        />
+      )}
       {selectedPaymentFee && selectedPaymentStudent && <PaymentDialog fee={selectedPaymentFee} student={selectedPaymentStudent} onSave={submitPayment} onClose={() => setPaymentFeeId('')} />}
       {selectedHistoryStudent && <StudentHistoryDialog student={selectedHistoryStudent} onClose={() => setHistoryStudentId('')} />}
       {receiptInfo && <ReceiptDialog receipt={receiptInfo.receipt} student={receiptInfo.student} schoolName={data?.schoolName ?? 'School'} month={receiptInfo.month} onClose={() => setReceiptInfo(null)} />}
