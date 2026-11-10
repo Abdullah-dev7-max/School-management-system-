@@ -10,11 +10,14 @@ const SESSION_LIFETIME_MS = 12 * 60 * 60 * 1000
 
 type Role = 'teacher' | 'student'
 type Input = {
-  action: 'login' | 'restore' | 'logout' | 'dashboard'
+  action: 'login' | 'restore' | 'logout' | 'dashboard' | 'attendance_sheet' | 'save_attendance'
   role?: Role
   email?: string
   password?: string
   token?: string
+  classId?: string
+  date?: string
+  rows?: Array<{ student_id: string; attended_on: string; status: string }>
 }
 
 function response(body: unknown, status = 200) {
@@ -49,7 +52,7 @@ Deno.serve(async (request) => {
 
   try {
     const input = await request.json() as Input
-    if (!['login', 'restore', 'logout', 'dashboard'].includes(input.action)) {
+    if (!['login', 'restore', 'logout', 'dashboard', 'attendance_sheet', 'save_attendance'].includes(input.action)) {
       return response({ error: 'Unsupported account action.' }, 400)
     }
 
@@ -138,6 +141,84 @@ Deno.serve(async (request) => {
       .single()
     if (profileError) throw profileError
     if (input.action === 'restore') return response({ profile })
+
+    if (input.action === 'attendance_sheet' || input.action === 'save_attendance') {
+      if (activeSession.role !== 'teacher') return response({ error: 'Teacher access is required.' }, 403)
+      if (!input.date || !/^\d{4}-\d{2}-\d{2}$/.test(input.date) || input.date > new Date().toISOString().slice(0, 10)) {
+        return response({ error: 'Choose a valid attendance date that is not in the future.' }, 400)
+      }
+
+      const { data: teacher, error: teacherError } = await admin
+        .from('teachers')
+        .select('id')
+        .eq('user_id', profile.id)
+        .single()
+      if (teacherError) throw teacherError
+
+      const { data: classes, error: classesError } = await admin
+        .from('classes')
+        .select('id, name, section')
+        .eq('class_teacher_id', teacher.id)
+        .order('name')
+        .order('section')
+      if (classesError) throw classesError
+      if (!input.classId) {
+        if (input.action === 'save_attendance') return response({ error: 'Choose a class before saving attendance.' }, 400)
+        return response({ classes, roster: [] })
+      }
+      const classItem = classes.find((item) => item.id === input.classId)
+      if (!classItem) return response({ error: 'This class is not assigned to your teacher account.' }, 403)
+
+      const { data: roster, error: rosterError } = await admin
+        .from('students')
+        .select('id, roll_no, admission_no, student:users!user_id(full_name)')
+        .eq('class_id', classItem.id)
+        .eq('status', 'active')
+        .order('roll_no')
+      if (rosterError) throw rosterError
+
+      if (input.action === 'save_attendance') {
+        const validStatuses = new Set(['present', 'absent', 'late', 'excused'])
+        const rosterIds = new Set(roster.map((student) => student.id))
+        if (
+          !Array.isArray(input.rows)
+          || input.rows.length !== roster.length
+          || input.rows.some((row) =>
+            !row
+            || !rosterIds.has(row.student_id)
+            || row.attended_on !== input.date
+            || !validStatuses.has(row.status)
+          )
+        ) {
+          return response({ error: 'Mark every student in this class before saving attendance.' }, 400)
+        }
+
+        const { error: saveError } = await admin.from('attendance').upsert(
+          input.rows.map((row) => ({ ...row, marked_by: teacher.id })),
+          { onConflict: 'student_id,attended_on' }
+        )
+        if (saveError) throw saveError
+        return response({ success: true })
+      }
+
+      const { data: records, error: recordsError } = await admin
+        .from('attendance')
+        .select('student_id, status')
+        .eq('attended_on', input.date)
+        .in('student_id', roster.map((student) => student.id))
+      if (recordsError) throw recordsError
+      const statusByStudent = new Map(records.map((record) => [record.student_id, record.status]))
+      return response({
+        classes,
+        roster: roster.map((student) => ({
+          id: student.id,
+          rollNo: student.roll_no,
+          admissionNo: student.admission_no,
+          name: student.student?.full_name ?? 'Unknown student',
+          status: statusByStudent.get(student.id) ?? null,
+        })),
+      })
+    }
 
     if (activeSession.role === 'teacher') {
       const { data: teacher, error: teacherError } = await admin

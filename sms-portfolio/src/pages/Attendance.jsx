@@ -8,6 +8,7 @@ import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
 import { Skeleton } from '../components/ui/States.jsx'
 import { ManagementError, SelectField } from '../components/admin/ManagementUi.jsx'
+import { useRole } from '../context/RoleContext.jsx'
 
 const OPTIONS = [
   { value: 'present', label: 'Present', active: 'bg-emerald-600 text-white' },
@@ -17,11 +18,12 @@ const OPTIONS = [
 ]
 
 export default function Attendance() {
+  const { session } = useRole()
   const [classId, setClassId] = useState('')
   const [date, setDate] = useState(toISODate())
   const [statuses, setStatuses] = useState({})
   const [saveState, setSaveState] = useState({ loading: false, message: '', error: '' })
-  const sheet = useAsync(() => fetchAttendancePage(classId, date), [classId, date], ['classes', 'students', 'users', 'attendance'])
+  const sheet = useAsync(() => fetchAttendancePage(classId, date, session?.custom ? session.token : null), [classId, date, session?.token], ['classes', 'students', 'users', 'attendance'])
   const classes = sheet.data?.classes ?? []
   const roster = sheet.data?.roster ?? []
 
@@ -62,7 +64,7 @@ export default function Attendance() {
         student_id: student.id,
         attended_on: date,
         status: statuses[student.id],
-      })))
+      })), session?.custom ? session.token : null, classId, date)
       setSaveState({ loading: false, message: `Saved attendance for ${roster.length} students.`, error: '' })
       sheet.reload()
     } catch (error) {

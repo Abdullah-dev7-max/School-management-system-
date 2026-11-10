@@ -325,7 +325,10 @@ export async function deleteClass(classId) {
   unwrap(await supabase.from('classes').delete().eq('id', classId))
 }
 
-export async function fetchAttendancePage(classId, date) {
+export async function fetchAttendancePage(classId, date, sessionToken) {
+  if (sessionToken) {
+    return invokeRoleAuth({ action: 'attendance_sheet', token: sessionToken, classId, date })
+  }
   const classes = unwrap(await supabase.from('classes').select('id, name, section').order('name').order('section'))
   if (!classId) return { classes, roster: [] }
   const roster = unwrap(
@@ -453,6 +456,59 @@ export async function saveClassMarks(rows) {
   if (rows.length) unwrap(await supabase.from('marks').upsert(rows, { onConflict: 'student_id,subject,exam' }))
 }
 
-export async function saveAttendance(rows) {
+export async function saveAttendance(rows, sessionToken, classId, date) {
+  if (sessionToken) {
+    return invokeRoleAuth({ action: 'save_attendance', token: sessionToken, classId, date, rows })
+  }
   unwrap(await supabase.from('attendance').upsert(rows, { onConflict: 'student_id,attended_on' }))
+}
+
+export async function fetchAdminAttendanceOverview(date) {
+  const [classesResult, studentsResult, attendanceResult] = await Promise.all([
+    supabase
+      .from('classes')
+      .select('id, name, section, class_teacher_id, teacher:teachers!class_teacher_id(teacher:users!user_id(full_name))')
+      .order('name')
+      .order('section'),
+    supabase
+      .from('students')
+      .select('id, class_id, roll_no, admission_no, student:users!user_id(full_name)')
+      .eq('status', 'active')
+      .order('roll_no'),
+    supabase
+      .from('attendance')
+      .select('student_id, status')
+      .eq('attended_on', date),
+  ])
+  const classes = unwrap(classesResult)
+  const students = unwrap(studentsResult)
+  const records = unwrap(attendanceResult)
+  const statusByStudent = new Map(records.map((record) => [record.student_id, record.status]))
+  const studentRows = students.map((student) => ({
+    id: student.id,
+    classId: student.class_id,
+    rollNo: student.roll_no,
+    admissionNo: student.admission_no,
+    name: student.student?.full_name ?? 'Unknown student',
+    status: statusByStudent.get(student.id) ?? null,
+  }))
+  const studentsByClass = new Map()
+  studentRows.forEach((student) => {
+    if (!student.classId) return
+    const roster = studentsByClass.get(student.classId) ?? []
+    roster.push(student)
+    studentsByClass.set(student.classId, roster)
+  })
+
+  return {
+    totalStudents: studentRows.length,
+    students: studentRows,
+    classes: classes.map((classItem) => ({
+      id: classItem.id,
+      name: classItem.name,
+      section: classItem.section,
+      teacherName: classItem.teacher?.teacher?.full_name ?? null,
+      students: studentsByClass.get(classItem.id) ?? [],
+    })),
+  }
 }

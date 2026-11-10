@@ -9,6 +9,7 @@ import Students from './pages/admin/Students.jsx'
 import Teachers from './pages/Teachers.jsx'
 import Classes from './pages/Classes.jsx'
 import Attendance from './pages/Attendance.jsx'
+import AttendanceOverview from './pages/admin/AttendanceOverview.jsx'
 import Fees from './pages/Fees.jsx'
 import Marks from './pages/Marks.jsx'
 import Settings from './pages/Settings.jsx'
@@ -77,14 +78,18 @@ export default function App() {
           <Route path="students" element={<Students />} />
           <Route path="teachers" element={<Teachers />} />
           <Route path="classes" element={<Classes />} />
-          <Route path="attendance" element={<Attendance />} />
+          <Route path="attendance" element={<AttendanceOverview />} />
           <Route path="fees" element={<Fees />} />
           <Route path="marks" element={<Marks />} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Placeholder />} />
         </Route>
       </Route>
-      {['teacher', 'student', 'parent'].map((role) => (
+      <Route path="teacher" element={<RequireRole role="teacher"><Layout /></RequireRole>}>
+        <Route index element={<RoleDashboard />} />
+        <Route path="attendance" element={<Attendance />} />
+      </Route>
+      {['student', 'parent'].map((role) => (
         <Route key={role} path={role} element={<RequireRole role={role}><Layout /></RequireRole>}>
           <Route index element={<RoleDashboard />} />
         </Route>
@@ -92,6 +97,7 @@ export default function App() {
       {['teacher', 'student'].map((role) => (
         <Route key={`${role}-dashboard`} path={`${role}-dashboard`} element={<RequireRole role={role}><Layout /></RequireRole>}>
           <Route index element={<RoleDashboard />} />
+          {role === 'teacher' && <Route path="attendance" element={<Attendance />} />}
         </Route>
       ))}
       <Route path="login" element={<Navigate to={roleHome[profile.role] ?? '/'} replace />} />

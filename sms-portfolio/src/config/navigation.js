@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Users,
   Wallet,
+  ClipboardList,
 } from 'lucide-react'
 
 /**
@@ -38,7 +39,10 @@ export const ROLES = {
     description: 'View your classes and student records',
     icon: GraduationCap,
     accent: 'from-sky-500 to-lilac-400',
-    nav: [{ to: '/teacher', label: 'Dashboard', icon: LayoutDashboard }],
+    nav: [
+      { to: '/teacher', label: 'Dashboard', icon: LayoutDashboard },
+      { to: '/teacher/attendance', label: 'Attendance', icon: ClipboardList },
+    ],
   },
   student: {
     id: 'student',
