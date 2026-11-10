@@ -176,8 +176,6 @@ export function RoleProvider({ children }) {
 
   const signInRole = useCallback(async (role, email, password) => {
     setProfileError(null)
-    const { error: signOutError } = await supabase.auth.signOut()
-    if (signOutError) throw signOutError
     clearRoleSession()
     const data = await invokeRoleAuth({ action: 'login', role, email: email.trim(), password })
     if (!data?.token || !data.profile) throw new Error('The account service returned an invalid session.')
