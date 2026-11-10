@@ -39,6 +39,21 @@ alter table public.fee_payments
   add column if not exists receipt_no text,
   add column if not exists remaining_balance numeric(10, 2);
 
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.fee_payments'::regclass
+      and confrelid = 'public.fees'::regclass
+      and contype = 'f'
+  ) then
+    alter table public.fee_payments
+      add constraint fee_payments_fee_id_fkey
+      foreign key (fee_id) references public.fees(id) on delete cascade;
+  end if;
+end $$;
+
 update public.fee_payments
 set receipt_no = 'FEE-' || lpad(nextval('public.fee_receipt_seq')::text, 10, '0')
 where receipt_no is null;
@@ -166,3 +181,5 @@ end;
 $$;
 revoke all on function public.record_fee_payment(uuid, numeric, date) from public, anon;
 grant execute on function public.record_fee_payment(uuid, numeric, date) to authenticated;
+
+notify pgrst, 'reload schema';

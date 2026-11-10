@@ -21,19 +21,34 @@ const className = (c) => (c ? `${c.name} ${c.section}` : 'Unassigned')
 
 export async function fetchAdminOverview() {
   const since = toISODate(daysAgo(13))
-  const [students, teachers, fees, attendance] = await Promise.all([
+  const [students, teachers, feeResult, attendance] = await Promise.all([
     supabase.from('students').select('id', { count: 'exact', head: true }),
     supabase.from('teachers').select('id', { count: 'exact', head: true }),
-    supabase.from('fees').select('id, student_id, title, amount, amount_paid, due_date, paid_on, status, fee_payments(amount, paid_on)'),
+    supabase.from('fees').select('id, student_id, title, amount, amount_paid, due_date, paid_on, status'),
     supabase.from('attendance').select('student_id, attended_on, status').gte('attended_on', since).order('attended_on'),
   ])
   if (students.error) throw new Error(students.error.message)
   if (teachers.error) throw new Error(teachers.error.message)
+  const feeRows = unwrap(feeResult)
+  const payments = unwrap(
+    feeRows.length
+      ? await supabase
+          .from('fee_payments')
+          .select('fee_id, amount, paid_on')
+          .in('fee_id', feeRows.map((fee) => fee.id))
+      : { data: [], error: null }
+  )
+  const paymentsByFee = {}
+  payments.forEach((payment) => {
+    const feePayments = paymentsByFee[payment.fee_id] ?? []
+    feePayments.push({ amount: payment.amount, paid_on: payment.paid_on })
+    paymentsByFee[payment.fee_id] = feePayments
+  })
 
   return {
     studentCount: students.count ?? 0,
     teacherCount: teachers.count ?? 0,
-    fees: unwrap(fees),
+    fees: feeRows.map((fee) => ({ ...fee, fee_payments: paymentsByFee[fee.id] ?? [] })),
     attendance: unwrap(attendance),
   }
 }
@@ -379,7 +394,7 @@ export async function fetchFeesPage(month) {
       .order('roll_no'),
     supabase
       .from('fees')
-      .select('id, student_id, title, amount, amount_paid, due_date, fee_month, status, fee_payments(id, amount, paid_on, receipt_no, remaining_balance)')
+      .select('id, student_id, title, amount, amount_paid, due_date, fee_month, status')
       .or(`fee_month.eq.${feeMonth},and(fee_month.is.null,due_date.gte.${feeMonth},due_date.lt.${nextMonth})`)
       .order('due_date'),
     supabase.from('institute_settings').select('school_name').eq('id', true).maybeSingle(),
@@ -403,17 +418,12 @@ export async function fetchFeesPage(month) {
     className: student.classes ? `${student.classes.name} ${student.classes.section}` : 'Unassigned',
   }))
   const studentById = Object.fromEntries(students.map((student) => [student.id, student]))
-  const feeRecords = fees.map((fee) => ({
-    ...fee,
-    student: studentById[fee.student_id] ?? null,
-    payments: [...(fee.fee_payments ?? [])].sort((a, b) => a.paid_on.localeCompare(b.paid_on)),
-  }))
 
   const [historyResult, paymentSummaryResult] = await Promise.all([
     studentRows.length
       ? supabase
           .from('fees')
-          .select('id, student_id, title, amount, amount_paid, due_date, fee_month, fee_payments(id, amount, paid_on, receipt_no, remaining_balance)')
+          .select('id, student_id, title, amount, amount_paid, due_date, fee_month')
           .in('student_id', studentRows.map((student) => student.id))
       : { data: [], error: null },
     supabase
@@ -424,16 +434,35 @@ export async function fetchFeesPage(month) {
   ])
   const historyFees = unwrap(historyResult)
   const monthPayments = unwrap(paymentSummaryResult)
+  const allPayments = unwrap(
+    historyFees.length
+      ? await supabase
+          .from('fee_payments')
+          .select('id, fee_id, amount, paid_on, receipt_no, remaining_balance')
+          .in('fee_id', historyFees.map((fee) => fee.id))
+      : { data: [], error: null }
+  )
+  const paymentsByFee = {}
+  allPayments.forEach((payment) => {
+    const payments = paymentsByFee[payment.fee_id] ?? []
+    payments.push(payment)
+    paymentsByFee[payment.fee_id] = payments
+  })
+  const feeRecords = fees.map((fee) => ({
+    ...fee,
+    student: studentById[fee.student_id] ?? null,
+    payments: [...(paymentsByFee[fee.id] ?? [])].sort((a, b) => a.paid_on.localeCompare(b.paid_on)),
+  }))
   const histories = {}
   historyFees.forEach((fee) => {
-    const payments = [...(fee.fee_payments ?? [])].sort((a, b) => a.paid_on.localeCompare(b.paid_on))
+    const payments = [...(paymentsByFee[fee.id] ?? [])].sort((a, b) => a.paid_on.localeCompare(b.paid_on))
     let runningPaid = 0
     payments.forEach((payment) => {
       runningPaid += Number(payment.amount)
       const history = histories[fee.student_id] ?? []
       history.push({
         ...payment,
-        month: fee.fee_month ? fee.fee_month.slice(0, 7) : fee.due_date.slice(0, 7),
+        month: (fee.fee_month ?? fee.due_date).slice(0, 7),
         remainingBalance: payment.remaining_balance == null
           ? Math.max(0, Number(fee.amount) - runningPaid)
           : Number(payment.remaining_balance),
@@ -441,16 +470,13 @@ export async function fetchFeesPage(month) {
       histories[fee.student_id] = history
     })
   })
+  Object.values(histories).forEach((history) => history.sort((a, b) => b.paid_on.localeCompare(a.paid_on)))
 
   const currentDate = toISODate()
-  const nowMonth = currentDate.slice(0, 7)
-  const defaulters = month === nowMonth
-    ? feeRecords.filter((fee) =>
-        fee.fee_month === feeMonth
-        && fee.due_date < currentDate
-        && Number(fee.amount) > Number(fee.amount_paid)
-      )
-    : []
+  const defaulters = feeRecords.filter((fee) =>
+    fee.due_date < currentDate
+    && Number(fee.amount) > Number(fee.amount_paid)
+  )
 
   return {
     classes,
