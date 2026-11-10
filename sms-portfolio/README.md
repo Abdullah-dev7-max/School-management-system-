@@ -36,6 +36,7 @@ In Supabase **SQL Editor**, run these scripts in order:
 12. `database/role_plaintext_password_migration.sql`
 13. `database/fee_management_migration.sql`
 14. `database/accountant_fee_collection_migration.sql`
+15. `database/class_announcements_migration.sql`
 
 These scripts are safe to rerun and do not reset existing tables. The
 production security migration removes only the former application's known
@@ -126,8 +127,12 @@ npm run preview
 - Marks (`/marks`): enter and edit examination marks by class, subject, and
   exam.
 - Teacher workspace (`/teacher-dashboard`): take attendance, enter examination
-  marks, and upload class notes. Private note files are limited to 10 MB and
-  can be downloaded only by students in the assigned class.
+  marks, upload class notes, and announce tests, assignments, quizzes, or
+  important updates to assigned classes. Private note files are limited to
+  10 MB and can be downloaded only by students in the assigned class.
+- Student workspace (`/student-dashboard`): view personal attendance, marks,
+  weekly class timetable, fee ledger and receipts, teacher notes, and class
+  announcements. Student records are returned only for the signed-in student.
 - Fees (`/fees`): issue student vouchers in PKR, record partial or full
   payments, and review outstanding balances and payment history.
 - Settings (`/settings`): update the administrator's database profile and

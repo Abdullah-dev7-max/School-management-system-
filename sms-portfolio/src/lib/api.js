@@ -659,6 +659,14 @@ export async function openClassNote(sessionToken, noteId) {
   window.location.assign(signedUrl)
 }
 
+export async function fetchTeacherAnnouncements(sessionToken) {
+  return invokeRoleAuth({ action: 'teacher_announcements', token: sessionToken })
+}
+
+export async function createClassAnnouncement(sessionToken, values) {
+  return invokeRoleAuth({ action: 'create_announcement', token: sessionToken, ...values })
+}
+
 export async function saveAttendance(rows, sessionToken, classId, date) {
   if (sessionToken) {
     return invokeRoleAuth({ action: 'save_attendance', token: sessionToken, classId, date, rows })

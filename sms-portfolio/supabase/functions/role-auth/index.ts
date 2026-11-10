@@ -24,6 +24,8 @@ type Input = {
     | 'create_note_upload'
     | 'save_note'
     | 'download_note'
+    | 'teacher_announcements'
+    | 'create_announcement'
   role?: Role
   email?: string
   password?: string
@@ -42,6 +44,9 @@ type Input = {
   fileSize?: number
   storagePath?: string
   noteId?: string
+  announcementType?: string
+  eventDate?: string | null
+  body?: string
 }
 
 const NOTES_BUCKET = 'class-notes'
@@ -107,6 +112,8 @@ Deno.serve(async (request) => {
       'create_note_upload',
       'save_note',
       'download_note',
+      'teacher_announcements',
+      'create_announcement',
     ].includes(input.action)) {
       return response({ error: 'Unsupported account action.' }, 400)
     }
@@ -275,7 +282,15 @@ Deno.serve(async (request) => {
       })
     }
 
-    if (input.action === 'marks_sheet' || input.action === 'save_marks' || input.action === 'teacher_notes' || input.action === 'create_note_upload' || input.action === 'save_note') {
+    if (
+      input.action === 'marks_sheet'
+      || input.action === 'save_marks'
+      || input.action === 'teacher_notes'
+      || input.action === 'create_note_upload'
+      || input.action === 'save_note'
+      || input.action === 'teacher_announcements'
+      || input.action === 'create_announcement'
+    ) {
       if (activeSession.role !== 'teacher') return response({ error: 'Teacher access is required.' }, 403)
 
       const { data: teacher, error: teacherError } = await admin
@@ -303,9 +318,56 @@ Deno.serve(async (request) => {
         return response({ classes, notes })
       }
 
+      if (input.action === 'teacher_announcements') {
+        const { data: announcements, error: announcementsError } = await admin
+          .from('class_announcements')
+          .select('id, class_id, announcement_type, title, body, event_date, created_at')
+          .eq('teacher_id', teacher.id)
+          .order('created_at', { ascending: false })
+        if (announcementsError) throw announcementsError
+        return response({ classes, announcements })
+      }
+
       if (input.action === 'marks_sheet' && !input.classId) {
         return response({ classes, roster: [] })
       }
+      if (input.action === 'create_announcement') {
+        const classItem = classes.find((item) => item.id === input.classId)
+        if (!classItem) return response({ error: 'This class is not assigned to your teacher account.' }, 403)
+        const allowedTypes = new Set(['test', 'assignment', 'quiz', 'notice'])
+        const title = input.title?.trim()
+        const body = input.body?.trim()
+        const eventDate = input.eventDate || null
+        const validEventDate = eventDate === null
+          || (
+            /^\d{4}-\d{2}-\d{2}$/.test(eventDate)
+            && !Number.isNaN(Date.parse(`${eventDate}T00:00:00Z`))
+            && new Date(`${eventDate}T00:00:00Z`).toISOString().slice(0, 10) === eventDate
+          )
+        if (
+          !input.announcementType || !allowedTypes.has(input.announcementType)
+          || !title || title.length > 160
+          || !body || body.length > 4000
+          || !validEventDate
+        ) {
+          return response({ error: 'Enter a valid type, title, message, and optional date.' }, 400)
+        }
+        const { data: announcement, error: announcementError } = await admin
+          .from('class_announcements')
+          .insert({
+            class_id: classItem.id,
+            teacher_id: teacher.id,
+            announcement_type: input.announcementType,
+            title,
+            body,
+            event_date: eventDate,
+          })
+          .select('id, class_id, announcement_type, title, body, event_date, created_at')
+          .single()
+        if (announcementError) throw announcementError
+        return response({ announcement })
+      }
+
       const classItem = classes.find((item) => item.id === input.classId)
       if (!classItem) return response({ error: 'This class is not assigned to your teacher account.' }, 403)
       const { data: roster, error: rosterError } = await admin
@@ -548,7 +610,7 @@ Deno.serve(async (request) => {
     if (studentsError) throw studentsError
     const studentIds = students.map((student) => student.id)
     const classIds = [...new Set(students.map((student) => student.class_id).filter(Boolean))]
-    const [fees, attendance, marks, notes] = studentIds.length
+    const [fees, attendance, marks, notes, timetable, announcements] = studentIds.length
       ? await Promise.all([
         admin.from('fees').select('id, student_id, title, amount, amount_paid, discount_total, late_fine_total, due_date, fee_month, status').in('student_id', studentIds).order('due_date', { ascending: false }),
         admin.from('attendance').select('student_id, attended_on, status').in('student_id', studentIds).order('attended_on', { ascending: false }).limit(30),
@@ -556,12 +618,27 @@ Deno.serve(async (request) => {
         classIds.length
           ? admin.from('class_notes').select('id, class_id, title, subject, file_name, file_size, created_at').in('class_id', classIds).order('created_at', { ascending: false })
           : Promise.resolve({ data: [], error: null }),
+        classIds.length
+          ? admin.from('timetable_slots').select('id, class_id, day_of_week, period, starts_at, ends_at, subject, room').in('class_id', classIds).order('day_of_week').order('period')
+          : Promise.resolve({ data: [], error: null }),
+        classIds.length
+          ? admin.from('class_announcements').select('id, class_id, announcement_type, title, body, event_date, created_at').in('class_id', classIds).order('created_at', { ascending: false })
+          : Promise.resolve({ data: [], error: null }),
       ])
-      : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }, { data: [], error: null }]
+      : [
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+      ]
     if (fees.error) throw fees.error
     if (attendance.error) throw attendance.error
     if (marks.error) throw marks.error
     if (notes.error) throw notes.error
+    if (timetable.error) throw timetable.error
+    if (announcements.error) throw announcements.error
     const feeIds = fees.data.map((fee) => fee.id)
     const { data: payments, error: paymentsError } = feeIds.length
       ? await admin
@@ -581,6 +658,8 @@ Deno.serve(async (request) => {
         title: feesById.get(payment.fee_id)?.title ?? 'Fee payment',
       })),
       notes: notes.data,
+      timetable: timetable.data,
+      announcements: announcements.data,
       attendance: attendance.data,
       marks: marks.data,
     })

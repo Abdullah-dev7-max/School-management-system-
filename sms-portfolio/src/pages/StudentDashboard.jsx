@@ -1,16 +1,24 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { BookOpen, CalendarCheck, Download, GraduationCap, Wallet } from 'lucide-react'
+import { Award, BookOpen, CalendarCheck, Download, GraduationCap, Megaphone, Wallet } from 'lucide-react'
 import { useRole } from '../context/RoleContext.jsx'
 import { useAsync } from '../hooks/useAsync.js'
 import { fetchRoleDashboard, openClassNote } from '../lib/api.js'
-import { formatDate, pkr } from '../lib/format.js'
+import { formatDate, formatTime, pkr } from '../lib/format.js'
 import Badge from '../components/ui/Badge.jsx'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
 import StatCard from '../components/ui/StatCard.jsx'
 import { ManagementError } from '../components/admin/ManagementUi.jsx'
 import { Skeleton } from '../components/ui/States.jsx'
+
+const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+const ANNOUNCEMENT_TYPES = {
+  test: { label: 'Test', tone: 'danger' },
+  assignment: { label: 'Assignment', tone: 'brand' },
+  quiz: { label: 'Quiz', tone: 'warning' },
+  notice: { label: 'Important notice', tone: 'info' },
+}
 
 export default function StudentDashboard() {
   const { profile, session } = useRole()
@@ -123,6 +131,55 @@ export default function StudentDashboard() {
           </GlassCard>
 
           <GlassCard className="overflow-hidden">
+            <div className="p-5 sm:p-6"><SectionHeader title="My marks" description="Exam results recorded by your teachers" /></div>
+            <div className="overflow-x-auto border-t border-white/70">
+              <table className="w-full min-w-[560px] text-left text-sm">
+                <thead className="bg-white/40 text-xs text-ink/55">
+                  <tr>{['Subject', 'Examination', 'Date', 'Score', 'Result'].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr>
+                </thead>
+                <tbody className="divide-y divide-ink/5">
+                  {(dashboard.data.marks ?? []).map((mark) => {
+                    const percent = Number(mark.max_score) > 0 ? (Number(mark.score) / Number(mark.max_score)) * 100 : null
+                    return (
+                      <tr key={`${mark.subject}-${mark.exam}`}>
+                        <td className="px-4 py-3 font-medium">{mark.subject}</td>
+                        <td className="px-4 py-3">{mark.exam}</td>
+                        <td className="px-4 py-3 text-ink/65">{formatDate(mark.exam_date)}</td>
+                        <td className="px-4 py-3">{mark.score} / {mark.max_score}</td>
+                        <td className="px-4 py-3">{percent == null ? '—' : `${Math.round(percent)}%`}</td>
+                      </tr>
+                    )
+                  })}
+                  {!dashboard.data.marks?.length && <tr><td colSpan="5" className="px-4 py-10 text-center text-ink/55">No exam marks have been recorded yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </GlassCard>
+
+          <GlassCard className="overflow-hidden">
+            <div className="p-5 sm:p-6"><SectionHeader title="My timetable" description="Weekly lessons for your class" /></div>
+            <div className="overflow-x-auto border-t border-white/70">
+              <table className="w-full min-w-[560px] text-left text-sm">
+                <thead className="bg-white/40 text-xs text-ink/55">
+                  <tr>{['Day', 'Period', 'Time', 'Subject', 'Room'].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr>
+                </thead>
+                <tbody className="divide-y divide-ink/5">
+                  {(dashboard.data.timetable ?? []).map((slot) => (
+                    <tr key={slot.id}>
+                      <td className="px-4 py-3 font-medium">{WEEKDAYS[slot.day_of_week - 1] ?? '—'}</td>
+                      <td className="px-4 py-3">{slot.period}</td>
+                      <td className="px-4 py-3">{formatTime(slot.starts_at)}–{formatTime(slot.ends_at)}</td>
+                      <td className="px-4 py-3">{slot.subject}</td>
+                      <td className="px-4 py-3">{slot.room ?? '—'}</td>
+                    </tr>
+                  ))}
+                  {!dashboard.data.timetable?.length && <tr><td colSpan="5" className="px-4 py-10 text-center text-ink/55">{student?.class_id ? 'No timetable has been published for your class yet.' : 'You are not assigned to a class yet.'}</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </GlassCard>
+
+          <GlassCard className="overflow-hidden">
             <div className="p-5 sm:p-6"><SectionHeader title="Recent attendance" description="Your individual attendance records" /></div>
             <ul className="divide-y divide-ink/5 border-t border-white/70 px-5 sm:px-6">
               {attendance.slice(0, 10).map((record) => (
@@ -132,6 +189,27 @@ export default function StudentDashboard() {
                 </li>
               ))}
               {!attendance.length && <li className="py-8 text-center text-sm text-ink/55">No attendance records are available.</li>}
+            </ul>
+          </GlassCard>
+
+          <GlassCard className="overflow-hidden">
+            <div className="p-5 sm:p-6"><SectionHeader title="Class announcements" description="Tests, assignments, quizzes, and important updates from your teacher" /></div>
+            <ul className="divide-y divide-ink/5 border-t border-white/70 px-5 sm:px-6">
+              {(dashboard.data.announcements ?? []).map((announcement) => {
+                const type = ANNOUNCEMENT_TYPES[announcement.announcement_type] ?? ANNOUNCEMENT_TYPES.notice
+                return (
+                  <li key={announcement.id} className="py-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone={type.tone}><Megaphone className="h-3 w-3" />{type.label}</Badge>
+                      <span className="text-xs text-ink/55">Posted {formatDate(announcement.created_at)}</span>
+                      {announcement.event_date && <span className="text-xs font-medium text-ink/70">Date: {formatDate(announcement.event_date)}</span>}
+                    </div>
+                    <h3 className="mt-2 text-sm font-semibold">{announcement.title}</h3>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-ink/70">{announcement.body}</p>
+                  </li>
+                )
+              })}
+              {!dashboard.data.announcements?.length && <li className="py-9 text-center text-sm text-ink/55">No announcements from your teacher yet.</li>}
             </ul>
           </GlassCard>
 

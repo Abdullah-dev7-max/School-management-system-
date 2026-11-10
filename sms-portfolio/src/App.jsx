@@ -15,6 +15,7 @@ import AttendanceOverview from './pages/admin/AttendanceOverview.jsx'
 import Fees from './pages/Fees.jsx'
 import Marks from './pages/Marks.jsx'
 import TeacherNotes from './pages/TeacherNotes.jsx'
+import TeacherAnnouncements from './pages/TeacherAnnouncements.jsx'
 import Settings from './pages/Settings.jsx'
 import Placeholder from './pages/Placeholder.jsx'
 import { useRole } from './context/RoleContext.jsx'
@@ -93,6 +94,7 @@ export default function App() {
         <Route path="attendance" element={<Attendance />} />
         <Route path="marks" element={<Marks />} />
         <Route path="notes" element={<TeacherNotes />} />
+        <Route path="announcements" element={<TeacherAnnouncements />} />
       </Route>
       <Route path="student" element={<RequireRole role="student"><Layout /></RequireRole>}>
         <Route index element={<StudentDashboard />} />
@@ -108,6 +110,7 @@ export default function App() {
               <Route path="attendance" element={<Attendance />} />
               <Route path="marks" element={<Marks />} />
               <Route path="notes" element={<TeacherNotes />} />
+              <Route path="announcements" element={<TeacherAnnouncements />} />
             </>
           )}
         </Route>

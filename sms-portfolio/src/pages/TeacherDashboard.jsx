@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { Award, CalendarCheck, ClipboardList, FileText, GraduationCap, School } from 'lucide-react'
+import { Award, CalendarCheck, ClipboardList, FileText, GraduationCap, Megaphone, School } from 'lucide-react'
 import { useRole } from '../context/RoleContext.jsx'
 import { useAsync } from '../hooks/useAsync.js'
 import { fetchRoleDashboard } from '../lib/api.js'
@@ -98,6 +98,9 @@ export default function TeacherDashboard() {
                 </Link>
                 <Link to="/teacher-dashboard/notes" className="inline-flex h-11 items-center gap-2 rounded-xl border border-ink/10 bg-white px-4 text-sm font-medium hover:bg-lilac-50">
                   <FileText className="h-4 w-4" />Share class notes
+                </Link>
+                <Link to="/teacher-dashboard/announcements" className="inline-flex h-11 items-center gap-2 rounded-xl border border-ink/10 bg-white px-4 text-sm font-medium hover:bg-lilac-50">
+                  <Megaphone className="h-4 w-4" />Announce tests and work
                 </Link>
               </div>
             </div>

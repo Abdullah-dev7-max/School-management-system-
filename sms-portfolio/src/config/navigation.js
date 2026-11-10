@@ -10,6 +10,7 @@ import {
   Wallet,
   ClipboardList,
   FileText,
+  Megaphone,
 } from 'lucide-react'
 
 /**
@@ -45,6 +46,7 @@ export const ROLES = {
       { to: '/teacher-dashboard/attendance', label: 'Attendance', icon: ClipboardList },
       { to: '/teacher-dashboard/marks', label: 'Exam marks', icon: Award },
       { to: '/teacher-dashboard/notes', label: 'Class notes', icon: FileText },
+      { to: '/teacher-dashboard/announcements', label: 'Announcements', icon: Megaphone },
     ],
   },
   student: {
