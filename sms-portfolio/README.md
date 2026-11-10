@@ -32,6 +32,7 @@ In Supabase **SQL Editor**, run these scripts in order:
 8. `database/role_password_auth_migration.sql`
 9. `database/role_password_column_migration.sql`
 10. `database/role_plaintext_password_migration.sql`
+11. `database/fee_management_migration.sql`
 
 These scripts are safe to rerun and do not reset existing tables. The
 production security migration removes only the former application's known

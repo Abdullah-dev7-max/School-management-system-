@@ -47,6 +47,8 @@ create table if not exists classes (
   room              text,
   academic_year     text not null,
   class_teacher_id  uuid references teachers(id) on delete set null,
+  monthly_fee       numeric(10, 2) check (monthly_fee is null or monthly_fee >= 0),
+  fee_due_day       smallint check (fee_due_day is null or fee_due_day between 1 and 31),
   created_at        timestamptz not null default now(),
   unique (name, section, academic_year)
 );
@@ -83,6 +85,7 @@ create table if not exists fees (
   amount       numeric(10,2) not null check (amount >= 0),
   amount_paid  numeric(10,2) not null default 0 check (amount_paid >= 0),
   due_date     date          not null,
+  fee_month    date,
   paid_on      date,
   status       fee_status    not null default 'pending',
   created_at   timestamptz   not null default now(),
@@ -112,11 +115,14 @@ create table if not exists institute_settings (
   updated_at    timestamptz not null default now()
 );
 
+create sequence if not exists public.fee_receipt_seq;
 create table if not exists fee_payments (
   id         uuid primary key default gen_random_uuid(),
   fee_id     uuid not null references fees(id) on delete cascade,
   amount     numeric(10,2) not null check (amount > 0),
   paid_on    date not null default current_date,
+  receipt_no text not null unique default ('FEE-' || lpad(nextval('public.fee_receipt_seq')::text, 10, '0')),
+  remaining_balance numeric(10, 2),
   created_at timestamptz not null default now()
 );
 
@@ -128,6 +134,9 @@ create index if not exists idx_attendance_date    on attendance(attended_on);
 create index if not exists idx_attendance_student on attendance(student_id);
 create index if not exists idx_fees_student       on fees(student_id);
 create index if not exists idx_fees_status        on fees(status);
+create unique index if not exists idx_fees_student_month
+  on fees(student_id, fee_month)
+  where fee_month is not null;
 create index if not exists idx_marks_student      on marks(student_id);
 create index if not exists idx_fee_payments_fee   on fee_payments(fee_id);
 

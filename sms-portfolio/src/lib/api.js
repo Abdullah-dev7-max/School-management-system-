@@ -361,37 +361,105 @@ export async function fetchAttendancePage(classId, date, sessionToken) {
   }
 }
 
-export async function fetchFeesPage() {
-  const [feeResult, studentResult] = await Promise.all([
+export async function fetchFeesPage(month) {
+  const feeMonth = `${month}-01`
+  const [year, monthNumber] = month.split('-').map(Number)
+  const nextMonth = `${monthNumber === 12 ? year + 1 : year}-${String(monthNumber === 12 ? 1 : monthNumber + 1).padStart(2, '0')}-01`
+  unwrap(await supabase.rpc('ensure_monthly_fee_records', { p_month: feeMonth }))
+  const [classResult, studentResult, feeResult, settingResult] = await Promise.all([
+    supabase
+      .from('classes')
+      .select('id, name, section, monthly_fee, fee_due_day')
+      .order('name')
+      .order('section'),
+    supabase
+      .from('students')
+      .select('id, user_id, admission_no, roll_no, class_id, classes(name, section)')
+      .eq('status', 'active')
+      .order('roll_no'),
     supabase
       .from('fees')
-      .select('id, student_id, title, amount, amount_paid, due_date, paid_on, status, fee_payments(id, amount, paid_on)')
-      .order('due_date', { ascending: true }),
-    supabase.from('students').select('id, user_id, admission_no'),
+      .select('id, student_id, title, amount, amount_paid, due_date, fee_month, status, fee_payments(id, amount, paid_on, receipt_no, remaining_balance)')
+      .or(`fee_month.eq.${feeMonth},and(fee_month.is.null,due_date.gte.${feeMonth},due_date.lt.${nextMonth})`)
+      .order('due_date'),
+    supabase.from('institute_settings').select('school_name').eq('id', true).maybeSingle(),
   ])
+  const classes = unwrap(classResult)
+  const studentRows = unwrap(studentResult)
   const fees = unwrap(feeResult)
-  const students = unwrap(studentResult)
-  const names = unwrap(
-    students.length
-      ? await supabase.from('users').select('id, full_name').in('id', students.map((student) => student.user_id))
+  const setting = unwrap(settingResult)
+  const profiles = unwrap(
+    studentRows.length
+      ? await supabase
+          .from('users')
+          .select('id, full_name')
+          .in('id', studentRows.map((student) => student.user_id))
       : { data: [], error: null }
   )
-  const studentById = Object.fromEntries(
-    students.map((student) => [
-      student.id,
-      {
-        ...student,
-        name: names.find((user) => user.id === student.user_id)?.full_name ?? 'Unknown student',
-      },
-    ])
-  )
+  const profilesById = Object.fromEntries(profiles.map((profile) => [profile.id, profile]))
+  const students = studentRows.map((student) => ({
+    ...student,
+    name: profilesById[student.user_id]?.full_name ?? 'Unknown student',
+    className: student.classes ? `${student.classes.name} ${student.classes.section}` : 'Unassigned',
+  }))
+  const studentById = Object.fromEntries(students.map((student) => [student.id, student]))
+  const feeRecords = fees.map((fee) => ({
+    ...fee,
+    student: studentById[fee.student_id] ?? null,
+    payments: [...(fee.fee_payments ?? [])].sort((a, b) => a.paid_on.localeCompare(b.paid_on)),
+  }))
+
+  const [historyResult, paymentSummaryResult] = await Promise.all([
+    studentRows.length
+      ? supabase
+          .from('fees')
+          .select('id, student_id, title, amount, amount_paid, due_date, fee_month, fee_payments(id, amount, paid_on, receipt_no, remaining_balance)')
+          .in('student_id', studentRows.map((student) => student.id))
+      : { data: [], error: null },
+    supabase
+      .from('fee_payments')
+      .select('amount, paid_on')
+      .gte('paid_on', feeMonth)
+      .lt('paid_on', nextMonth),
+  ])
+  const historyFees = unwrap(historyResult)
+  const monthPayments = unwrap(paymentSummaryResult)
+  const histories = {}
+  historyFees.forEach((fee) => {
+    const payments = [...(fee.fee_payments ?? [])].sort((a, b) => a.paid_on.localeCompare(b.paid_on))
+    let runningPaid = 0
+    payments.forEach((payment) => {
+      runningPaid += Number(payment.amount)
+      const history = histories[fee.student_id] ?? []
+      history.push({
+        ...payment,
+        month: fee.fee_month ? fee.fee_month.slice(0, 7) : fee.due_date.slice(0, 7),
+        remainingBalance: payment.remaining_balance == null
+          ? Math.max(0, Number(fee.amount) - runningPaid)
+          : Number(payment.remaining_balance),
+      })
+      histories[fee.student_id] = history
+    })
+  })
+
+  const currentDate = toISODate()
+  const nowMonth = currentDate.slice(0, 7)
+  const defaulters = month === nowMonth
+    ? feeRecords.filter((fee) =>
+        fee.fee_month === feeMonth
+        && fee.due_date < currentDate
+        && Number(fee.amount) > Number(fee.amount_paid)
+      )
+    : []
+
   return {
-    fees: fees.map((fee) => ({ ...fee, student: studentById[fee.student_id] ?? null })),
-    students: students.map((student) => ({
-      id: student.id,
-      admission_no: student.admission_no,
-      name: studentById[student.id]?.name ?? 'Unknown student',
-    })),
+    classes,
+    students: students.map((student) => ({ ...student, history: histories[student.id] ?? [] })),
+    fees: feeRecords,
+    schoolName: setting?.school_name || 'School',
+    collected: monthPayments.reduce((total, payment) => total + Number(payment.amount), 0),
+    pending: feeRecords.reduce((total, fee) => total + Math.max(0, Number(fee.amount) - Number(fee.amount_paid)), 0),
+    defaulters,
   }
 }
 
@@ -408,12 +476,22 @@ export async function issueFeeVoucher({ studentId, title, amount, dueDate }) {
   }))
 }
 
+export async function updateClassFee(classId, monthlyFee, dueDay) {
+  const amount = monthlyFee === '' ? null : Number(monthlyFee)
+  const day = dueDay === '' ? null : Number(dueDay)
+  if (amount != null && (!Number.isFinite(amount) || amount < 0)) throw new Error('Enter a valid monthly fee amount.')
+  if (day != null && (!Number.isInteger(day) || day < 1 || day > 31)) throw new Error('Due day must be between 1 and 31.')
+  unwrap(await supabase.from('classes').update({ monthly_fee: amount, fee_due_day: day }).eq('id', classId))
+}
+
 export async function recordFeePayment(fee, paymentAmount, paidOn) {
-  unwrap(await supabase.rpc('record_fee_payment', {
+  const { data, error } = await supabase.rpc('record_fee_payment', {
     p_fee_id: fee.id,
     p_amount: paymentAmount,
     p_paid_on: paidOn,
-  }))
+  })
+  if (error) throw new Error(error.message)
+  return data
 }
 
 export async function fetchMarksPage(classId, subject, exam) {
