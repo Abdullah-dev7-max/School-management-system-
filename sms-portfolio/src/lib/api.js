@@ -1,12 +1,18 @@
 import { supabase } from './supabaseClient.js'
 import { daysAgo, toISODate } from './format.js'
-import { hashPassword } from './password.js'
 import { invokeRoleAuth } from './roleAuth.js'
 
 /** supabase-js resolves with { data, error }. Turn errors into thrown exceptions. */
 function unwrap({ data, error }) {
   if (error) throw new Error(error.message)
   return data
+}
+
+function throwProfileInsertError(error) {
+  if (error.code === '23505') {
+    throw new Error('This email is already registered.')
+  }
+  throw new Error(error.message)
 }
 
 const className = (c) => (c ? `${c.name} ${c.section}` : 'Unassigned')
@@ -106,7 +112,6 @@ export async function fetchStudentsPage() {
 }
 
 export async function createStudent(values) {
-  const { passwordSalt, password } = await hashPassword(values.password)
   const { data: profile, error: profileError } = await supabase
     .from('users')
     .insert({
@@ -117,7 +122,7 @@ export async function createStudent(values) {
     })
     .select('id')
     .single()
-  if (profileError) throw new Error(profileError.message)
+  if (profileError) throwProfileInsertError(profileError)
 
   const { data: student, error: studentError } = await supabase
     .from('students')
@@ -127,8 +132,7 @@ export async function createStudent(values) {
       roll_no: values.rollNo === '' || values.rollNo == null ? null : Number(values.rollNo),
       class_id: values.classId || null,
       status: values.status || 'active',
-      password_salt: passwordSalt,
-      password,
+      password: values.password,
     })
     .select('id')
     .single()
@@ -152,9 +156,7 @@ export async function updateStudent(student, { fullName, email, phone, password,
     status,
   }
   if (password) {
-    const { passwordSalt, password: passwordDigest } = await hashPassword(password)
-    update.password_salt = passwordSalt
-    update.password = passwordDigest
+    update.password = password
   }
   unwrap(
     await supabase
@@ -200,7 +202,6 @@ export async function fetchTeachersPage() {
 }
 
 export async function createTeacher(values) {
-  const { passwordSalt, password } = await hashPassword(values.password)
   const { data: profile, error: profileError } = await supabase
     .from('users')
     .insert({
@@ -211,7 +212,7 @@ export async function createTeacher(values) {
     })
     .select('id')
     .single()
-  if (profileError) throw new Error(profileError.message)
+  if (profileError) throwProfileInsertError(profileError)
 
   const { data: teacher, error: teacherError } = await supabase
     .from('teachers')
@@ -220,8 +221,7 @@ export async function createTeacher(values) {
       employee_code: values.employeeCode.trim(),
       subject: values.subject.trim(),
       status: values.status || 'active',
-      password_salt: passwordSalt,
-      password,
+      password: values.password,
     })
     .select('id')
     .single()
@@ -238,9 +238,7 @@ export async function createTeacher(values) {
 export async function updateTeacher(teacher, { fullName, email, phone, employeeCode, subject, status, password }) {
   const update = { employee_code: employeeCode, subject, status }
   if (password) {
-    const { passwordSalt, password: passwordDigest } = await hashPassword(password)
-    update.password_salt = passwordSalt
-    update.password = passwordDigest
+    update.password = password
   }
   unwrap(
     await supabase

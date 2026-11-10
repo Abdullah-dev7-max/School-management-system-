@@ -6,7 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json',
 }
-const ITERATIONS = 310_000
 const SESSION_LIFETIME_MS = 12 * 60 * 60 * 1000
 
 type Role = 'teacher' | 'student'
@@ -22,10 +21,6 @@ function response(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: corsHeaders })
 }
 
-function decodeBase64(value: string) {
-  return Uint8Array.from(atob(value), (char) => char.charCodeAt(0))
-}
-
 function encodeBase64(value: Uint8Array) {
   return btoa(String.fromCharCode(...value))
 }
@@ -38,23 +33,6 @@ async function digest(value: string) {
 async function createSessionToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(32))
   return encodeBase64(bytes)
-}
-
-function constantTimeEqual(left: Uint8Array, right: Uint8Array) {
-  if (left.length !== right.length) return false
-  let difference = 0
-  for (let index = 0; index < left.length; index += 1) difference |= left[index] ^ right[index]
-  return difference === 0
-}
-
-async function verifyPassword(password: string, salt: string, expected: string) {
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'])
-  const actual = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt: decodeBase64(salt), iterations: ITERATIONS },
-    key,
-    256
-  )
-  return constantTimeEqual(new Uint8Array(actual), decodeBase64(expected))
 }
 
 Deno.serve(async (request) => {
@@ -91,7 +69,7 @@ Deno.serve(async (request) => {
       const table = input.role === 'teacher' ? 'teachers' : 'students'
       const { data: account, error: accountError } = await admin
         .from(table)
-        .select('password_salt, password, status')
+        .select('password, status')
         .eq('user_id', user?.id ?? '')
         .maybeSingle()
       if (accountError) throw accountError
@@ -99,9 +77,7 @@ Deno.serve(async (request) => {
         !user
         || !account
         || account.status !== 'active'
-        || !account.password_salt
-        || !account.password
-        || !await verifyPassword(input.password, account.password_salt, account.password)
+        || account.password !== input.password
       ) {
         return response({ error: 'Invalid email or password.' }, 401)
       }

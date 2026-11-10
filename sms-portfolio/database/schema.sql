@@ -36,7 +36,6 @@ create table if not exists teachers (
   subject        text        not null,
   qualification  text,
   joined_on      date,
-  password_salt  text,
   password      text,
   created_at     timestamptz not null default now()
 );
@@ -60,7 +59,6 @@ create table if not exists students (
   admission_no   text        not null unique,
   roll_no        int,
   status         text        not null default 'active' check (status in ('active', 'inactive', 'withdrawn')),
-  password_salt text,
   password      text,
   date_of_birth  date,
   gender         text check (gender in ('female', 'male', 'other')),
