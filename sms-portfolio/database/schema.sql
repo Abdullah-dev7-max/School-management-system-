@@ -16,8 +16,8 @@ do $$ begin create type fee_status as enum ('paid', 'partial', 'pending', 'overd
 exception when duplicate_object then null; end $$;
 
 -- ---------- 2. Tables ----------
--- People records are created by institute administrators. Only admin accounts
--- are linked to Supabase Auth; staff/student accounts may be linked later.
+-- People records are created by institute administrators. Admin accounts use
+-- Supabase Auth; teacher/student accounts use the role-auth service.
 create table if not exists users (
   id          uuid primary key default gen_random_uuid(),
   auth_user_id uuid unique references auth.users(id) on delete set null,
@@ -36,6 +36,8 @@ create table if not exists teachers (
   subject        text        not null,
   qualification  text,
   joined_on      date,
+  password_salt  text,
+  password      text,
   created_at     timestamptz not null default now()
 );
 
@@ -58,6 +60,8 @@ create table if not exists students (
   admission_no   text        not null unique,
   roll_no        int,
   status         text        not null default 'active' check (status in ('active', 'inactive', 'withdrawn')),
+  password_salt text,
+  password      text,
   date_of_birth  date,
   gender         text check (gender in ('female', 'male', 'other')),
   created_at     timestamptz not null default now()

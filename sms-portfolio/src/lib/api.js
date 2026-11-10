@@ -106,7 +106,7 @@ export async function fetchStudentsPage() {
 }
 
 export async function createStudent(values) {
-  const { passwordSalt, passwordHash } = await hashPassword(values.password)
+  const { passwordSalt, password } = await hashPassword(values.password)
   const { data: profile, error: profileError } = await supabase
     .from('users')
     .insert({
@@ -128,7 +128,7 @@ export async function createStudent(values) {
       class_id: values.classId || null,
       status: values.status || 'active',
       password_salt: passwordSalt,
-      password_hash: passwordHash,
+      password,
     })
     .select('id')
     .single()
@@ -152,9 +152,9 @@ export async function updateStudent(student, { fullName, email, phone, password,
     status,
   }
   if (password) {
-    const { passwordSalt, passwordHash } = await hashPassword(password)
+    const { passwordSalt, password: passwordDigest } = await hashPassword(password)
     update.password_salt = passwordSalt
-    update.password_hash = passwordHash
+    update.password = passwordDigest
   }
   unwrap(
     await supabase
@@ -200,7 +200,7 @@ export async function fetchTeachersPage() {
 }
 
 export async function createTeacher(values) {
-  const { passwordSalt, passwordHash } = await hashPassword(values.password)
+  const { passwordSalt, password } = await hashPassword(values.password)
   const { data: profile, error: profileError } = await supabase
     .from('users')
     .insert({
@@ -221,7 +221,7 @@ export async function createTeacher(values) {
       subject: values.subject.trim(),
       status: values.status || 'active',
       password_salt: passwordSalt,
-      password_hash: passwordHash,
+      password,
     })
     .select('id')
     .single()
@@ -238,9 +238,9 @@ export async function createTeacher(values) {
 export async function updateTeacher(teacher, { fullName, email, phone, employeeCode, subject, status, password }) {
   const update = { employee_code: employeeCode, subject, status }
   if (password) {
-    const { passwordSalt, passwordHash } = await hashPassword(password)
+    const { passwordSalt, password: passwordDigest } = await hashPassword(password)
     update.password_salt = passwordSalt
-    update.password_hash = passwordHash
+    update.password = passwordDigest
   }
   unwrap(
     await supabase

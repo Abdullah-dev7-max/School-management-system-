@@ -91,17 +91,17 @@ Deno.serve(async (request) => {
       const table = input.role === 'teacher' ? 'teachers' : 'students'
       const { data: account, error: accountError } = await admin
         .from(table)
-        .select('password_salt, password_hash, status')
+        .select('password_salt, password, status')
         .eq('user_id', user?.id ?? '')
         .maybeSingle()
       if (accountError) throw accountError
       if (
         !user
-        ||         !account
+        || !account
         || account.status !== 'active'
         || !account.password_salt
-        || !account.password_hash
-        || !await verifyPassword(input.password, account.password_salt, account.password_hash)
+        || !account.password
+        || !await verifyPassword(input.password, account.password_salt, account.password)
       ) {
         return response({ error: 'Invalid email or password.' }, 401)
       }

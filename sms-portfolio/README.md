@@ -30,6 +30,7 @@ In Supabase **SQL Editor**, run these scripts in order:
 6. `database/multirole_auth_migration.sql`
 7. `database/login_profile_link_migration.sql`
 8. `database/role_password_auth_migration.sql`
+9. `database/role_password_column_migration.sql`
 
 These scripts are safe to rerun and do not reset existing tables. The
 production security migration removes only the former application's known
@@ -75,7 +76,10 @@ with per-account salts, never plaintext. Deploy the `role-auth` Edge Function
 with the Supabase CLI (`supabase functions deploy role-auth`). It verifies
 credentials and manages expiring server-side sessions; teacher/student
 dashboard data is returned only after the session is verified. Keep the
-service-role key server-side. Teacher password changes update the stored hash.
+service-role key server-side. The database `password` column contains a
+PBKDF2 digest, never the submitted plaintext password; the migration renames
+the previous `password_hash` column and preserves existing credentials.
+Teacher and student password changes update the stored digest.
 For accounts created before this migration, set an initial password from the
 teacher/student management form before the user signs in.
 

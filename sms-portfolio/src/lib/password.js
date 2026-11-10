@@ -20,5 +20,5 @@ export async function hashPassword(password) {
     KEY_LENGTH
   )
 
-  return { passwordSalt: toBase64(salt), passwordHash: toBase64(new Uint8Array(bits)) }
+  return { passwordSalt: toBase64(salt), password: toBase64(new Uint8Array(bits)) }
 }

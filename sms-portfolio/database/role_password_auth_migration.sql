@@ -3,11 +3,11 @@
 
 alter table public.teachers
   add column if not exists password_salt text,
-  add column if not exists password_hash text;
+  add column if not exists password text;
 
 alter table public.students
   add column if not exists password_salt text,
-  add column if not exists password_hash text;
+  add column if not exists password text;
 
 create table if not exists public.role_sessions (
   token_hash text primary key,
