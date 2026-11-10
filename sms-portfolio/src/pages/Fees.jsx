@@ -156,18 +156,49 @@ function IssueVoucherDialog({ students, onSave, onClose }) {
 }
 
 function PaymentDialog({ fee, student, onSave, onClose }) {
-  const [amount, setAmount] = useState('')
+  const [amount, setAmount] = useState('0')
+  const [discount, setDiscount] = useState('0')
+  const [lateFine, setLateFine] = useState('0')
+  const [paymentMode, setPaymentMode] = useState('Cash')
   const [paidOn, setPaidOn] = useState(toISODate())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const balance = Math.max(0, Number(fee.amount) - Number(fee.amount_paid))
+  const balance = Number(fee.balance ?? (
+    Number(fee.amount)
+      + Number(fee.late_fine_total ?? 0)
+      - Number(fee.discount_total ?? 0)
+      - Number(fee.amount_paid)
+  ))
+  const newBalance = Math.max(
+    0,
+    balance + (Number(lateFine) || 0) - (Number(discount) || 0) - (Number(amount) || 0)
+  )
 
   const submit = async (event) => {
     event.preventDefault()
+    const payment = {
+      amount: Number(amount) || 0,
+      discount: Number(discount) || 0,
+      lateFine: Number(lateFine) || 0,
+      paidOn,
+      paymentMode,
+    }
+    if (payment.amount < 0 || payment.discount < 0 || payment.lateFine < 0) {
+      setError('Amounts cannot be negative.')
+      return
+    }
+    if (payment.amount + payment.discount <= 0) {
+      setError('Enter an amount received or a concession.')
+      return
+    }
+    if (payment.amount + payment.discount > balance + payment.lateFine) {
+      setError('Amount received and concession cannot exceed the outstanding balance plus the late fine.')
+      return
+    }
     setSaving(true)
     setError('')
     try {
-      await onSave(fee, Number(amount), paidOn, student)
+      await onSave(fee, payment, student)
       onClose()
     } catch (saveError) {
       setError(saveError.message)
@@ -177,20 +208,36 @@ function PaymentDialog({ fee, student, onSave, onClose }) {
   }
 
   return (
-    <DialogFrame title="Record payment" description={`${student.name} · ${fee.title}`} onClose={onClose} maxWidth="max-w-xl">
+    <DialogFrame title="Collect payment" description={`${student.name} · ${fee.title}`} onClose={onClose} maxWidth="max-w-xl">
       <form onSubmit={submit} className="mt-5 space-y-4">
         <p className="rounded-xl bg-white/70 p-3 text-sm">Outstanding balance: <strong>{pkr(balance)}</strong></p>
-        <label className="block text-sm font-medium">Amount paid (PKR)
-          <input type="number" min="0.01" max={balance} step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} required className={FIELD} />
-        </label>
-        <label className="block text-sm font-medium">Payment date
-          <input type="date" max={toISODate()} value={paidOn} onChange={(event) => setPaidOn(event.target.value)} required className={FIELD} />
-        </label>
-        <p className="text-xs text-ink/55">Remaining after payment: {pkr(Math.max(0, balance - (Number(amount) || 0)))}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm font-medium">Receiving amount (PKR)
+            <input type="number" min="0" max={balance + (Number(lateFine) || 0)} step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} required className={FIELD} />
+          </label>
+          <label className="block text-sm font-medium">Discount / concession (PKR)
+            <input type="number" min="0" max={balance + (Number(lateFine) || 0)} step="0.01" value={discount} onChange={(event) => setDiscount(event.target.value)} className={FIELD} />
+          </label>
+          <label className="block text-sm font-medium">Late fine add-on (PKR)
+            <input type="number" min="0" step="0.01" value={lateFine} onChange={(event) => setLateFine(event.target.value)} className={FIELD} />
+          </label>
+          <label className="block text-sm font-medium">Payment mode
+            <select value={paymentMode} onChange={(event) => setPaymentMode(event.target.value)} className={FIELD}>
+              <option>Cash</option>
+              <option>Bank Transfer</option>
+              <option>Easypaisa/JazzCash</option>
+              <option>Cheque</option>
+            </select>
+          </label>
+          <label className="block text-sm font-medium sm:col-span-2">Payment date
+            <input type="date" max={toISODate()} value={paidOn} onChange={(event) => setPaidOn(event.target.value)} required className={FIELD} />
+          </label>
+        </div>
+        <p className="text-xs text-ink/55">Balance after this transaction: <strong>{pkr(newBalance)}</strong></p>
         {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} disabled={saving} className="h-11 rounded-xl px-4 text-sm hover:bg-ink/5">Cancel</button>
-          <button type="submit" disabled={saving} className={BUTTON}>{saving ? 'Saving…' : 'Save payment'}</button>
+          <button type="submit" disabled={saving} className={BUTTON}>{saving ? 'Saving…' : 'Collect payment'}</button>
         </div>
       </form>
     </DialogFrame>
@@ -202,11 +249,11 @@ function StudentHistoryDialog({ student, onClose }) {
   return (
     <DialogFrame title={`${student.name} · Fee history`} description={`Roll ${student.roll_no ?? '–'} · Admission ${student.admission_no ?? '–'} · ${student.className}`} onClose={onClose}>
       <div className="mt-5 max-h-[65vh] overflow-auto rounded-2xl bg-white/60">
-        <table className="w-full min-w-[650px] text-left text-sm">
-          <thead className="sticky top-0 bg-white/90 text-xs text-ink/55"><tr>{['Payment date', 'Month', 'Amount paid', 'Remaining fee', 'Receipt no.'].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead>
+        <table className="w-full min-w-[900px] text-left text-sm">
+          <thead className="sticky top-0 bg-white/90 text-xs text-ink/55"><tr>{['Payment date', 'Month', 'Amount received', 'Discount', 'Late fine', 'Mode', 'Remaining fee', 'Receipt no.'].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead>
           <tbody className="divide-y divide-ink/5">
-            {student.history.map((payment) => <tr key={payment.id}><td className="px-4 py-3">{formatDate(payment.paid_on)}</td><td className="px-4 py-3">{payment.month?.length === 7 ? monthLabel(payment.month) : payment.month}</td><td className="px-4 py-3">{pkr(payment.amount)}</td><td className="px-4 py-3">{pkr(payment.remainingBalance)}</td><td className="px-4 py-3 font-mono text-xs">{payment.receipt_no ?? '–'}</td></tr>)}
-            {!student.history.length && <tr><td colSpan="5" className="px-4 py-10 text-center text-ink/50">No payments recorded yet.</td></tr>}
+            {student.history.map((payment) => <tr key={payment.id}><td className="px-4 py-3">{formatDate(payment.paid_on)}</td><td className="px-4 py-3">{payment.month?.length === 7 ? monthLabel(payment.month) : payment.month}</td><td className="px-4 py-3">{pkr(payment.amount)}</td><td className="px-4 py-3">{pkr(payment.discount)}</td><td className="px-4 py-3">{pkr(payment.late_fine)}</td><td className="px-4 py-3">{payment.payment_mode}</td><td className="px-4 py-3">{pkr(payment.remainingBalance)}</td><td className="px-4 py-3 font-mono text-xs">{payment.receipt_no ?? '–'}</td></tr>)}
+            {!student.history.length && <tr><td colSpan="8" className="px-4 py-10 text-center text-ink/50">No payments recorded yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -236,9 +283,12 @@ function ReceiptDialog({ receipt, student, schoolName, month, onClose }) {
             <dt className="text-ink/55">Class</dt><dd className="text-right">{student.className}</dd>
             <dt className="text-ink/55">Fee month</dt><dd className="text-right">{monthLabel(month)}</dd>
             <dt className="text-ink/55">Payment date</dt><dd className="text-right">{formatDate(receipt.paid_on)}</dd>
+            <dt className="text-ink/55">Payment mode</dt><dd className="text-right">{receipt.payment_mode}</dd>
           </dl>
           <div className="mt-6 space-y-3 border-t border-dashed border-ink/25 pt-4 text-sm">
             <p className="flex justify-between gap-4"><span>Amount paid</span><strong>{pkr(receipt.amount_paid)}</strong></p>
+            {Number(receipt.discount) > 0 && <p className="flex justify-between gap-4"><span>Discount / concession</span><strong>{pkr(receipt.discount)}</strong></p>}
+            {Number(receipt.late_fine) > 0 && <p className="flex justify-between gap-4"><span>Late fine</span><strong>{pkr(receipt.late_fine)}</strong></p>}
             <p className="flex justify-between gap-4 text-base"><span>Remaining balance</span><strong>{pkr(receipt.remaining_balance)}</strong></p>
           </div>
           <p className="mt-8 border-t border-ink/10 pt-4 text-center text-xs text-ink/45">Please retain this receipt for your records.</p>
@@ -271,22 +321,21 @@ export default function Fees() {
   const selectedHistoryStudent = data?.students.find((student) => student.id === historyStudentId) ?? null
   const selectedPaymentFee = data?.fees.find((fee) => fee.id === paymentFeeId) ?? null
   const selectedPaymentStudent = selectedPaymentFee ? studentsById[selectedPaymentFee.student_id] : null
-  const currentDefaulters = (data?.defaulters ?? []).map((fee) => ({
-    ...fee,
-    student: studentsById[fee.student_id],
-  }))
   const visibleRows = useMemo(() => {
     const term = search.trim().toLowerCase()
     return (data?.fees ?? []).filter((fee) => {
       const student = studentsById[fee.student_id]
       if (!student) return false
-      const balance = Math.max(0, Number(fee.amount) - Number(fee.amount_paid))
+      const balance = Number(fee.balance)
       const isPaid = balance === 0
-      const overdue = fee.due_date < toISODate() && !isPaid
+      const isPartial = !isPaid && (
+        Number(fee.amount_paid) > 0 || Number(fee.discount_total ?? 0) > 0
+      )
       const matchesStatus = statusFilter === 'all'
         || (statusFilter === 'paid' && isPaid)
-        || (statusFilter === 'unpaid' && overdue)
-      const matchesSearch = !term || [student.name, student.roll_no, student.admission_no, student.className]
+        || (statusFilter === 'partial' && isPartial)
+        || (statusFilter === 'unpaid' && !isPaid && !isPartial)
+      const matchesSearch = !term || [student.name, student.roll_no, student.admission_no]
         .some((value) => String(value ?? '').toLowerCase().includes(term))
       return matchesStatus && matchesSearch
     })
@@ -297,8 +346,8 @@ export default function Fees() {
     await page.reload()
   }
 
-  const submitPayment = async (fee, value, paidOn, student) => {
-    const savedReceipt = await recordFeePayment(fee, value, paidOn)
+  const submitPayment = async (fee, payment, student) => {
+    const savedReceipt = await recordFeePayment(fee, payment)
     setReceiptInfo({
       receipt: savedReceipt,
       student,
@@ -308,12 +357,15 @@ export default function Fees() {
   }
 
   if (page.error) return <ErrorState error={page.error} onRetry={page.reload} />
+  const collected = visibleRows.reduce((total, fee) => total + Number(fee.amount_paid), 0)
+  const pending = data?.pending ?? 0
+  const defaulterCount = new Set((data?.defaulters ?? []).map((fee) => fee.student_id)).size
 
   return (
     <div className="space-y-5">
       <GlassCard className="p-5 sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <SectionHeader title="Fee management" description="Configure class fees, record student payments, and review receipts." />
+          <SectionHeader title="Fee collection" description="Manage school receivables, concessions, and payment transactions." />
           <label className="block min-w-48 text-sm font-medium">Fee month
             <input type="month" value={month} min="2000-01" max={currentMonth()} onChange={(event) => event.target.value && setMonth(event.target.value)} className={FIELD} />
           </label>
@@ -325,9 +377,9 @@ export default function Fees() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-3">
-            <StatCard icon={Wallet} label="Collected this month" value={pkr(data.collected)} hint={monthLabel(month)} accent="from-emerald-500 to-emerald-300" />
-            <StatCard icon={ReceiptText} label="Pending this month" value={pkr(data.pending)} hint="Unpaid balance on monthly invoices" accent="from-amber-500 to-amber-300" />
-            <StatCard icon={Users} label="Defaulters" value={currentDefaulters.length} hint={`Overdue in ${monthLabel(month)}`} accent="from-rose-500 to-rose-300" />
+            <StatCard icon={Wallet} label="Collected this month" value={pkr(collected)} hint={`${monthLabel(month)} · current ledger filters`} accent="from-emerald-500 to-emerald-300" />
+            <StatCard icon={ReceiptText} label="Pending receivables" value={pkr(pending)} hint="Remaining balance across all active invoices" accent="from-amber-500 to-amber-300" />
+            <StatCard icon={Users} label="Defaulter accounts" value={defaulterCount} hint="Unique students past due with a balance" accent="from-rose-500 to-rose-300" />
           </div>
 
           <GlassCard className="p-5 sm:p-6">
@@ -348,36 +400,41 @@ export default function Fees() {
               <label className="block min-w-52 text-sm font-medium">Payment status
                 <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className={FIELD}>
                   <option value="all">All</option>
+                  <option value="unpaid">Unpaid</option>
+                  <option value="partial">Partial</option>
                   <option value="paid">Paid</option>
-                  <option value="unpaid">Unpaid (Defaulters)</option>
                 </select>
               </label>
             </div>
             <div className="overflow-x-auto border-t border-white/70">
               <table className="w-full min-w-[1050px] text-left text-sm">
-                <thead className="bg-white/40 text-xs text-ink/55"><tr>{['Student', 'Roll no.', 'Admission no.', 'Class', 'Month', 'Amount', 'Paid', 'Balance', 'Status', 'Actions'].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead>
+                <thead className="bg-white/40 text-xs text-ink/55"><tr>{['Roll / Adm no.', 'Student name', 'Month / title', 'Total amount', 'Paid', 'Balance', 'Status', 'Actions'].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead>
                 <tbody className="divide-y divide-white/70">
                   {visibleRows.map((fee) => {
                     const student = studentsById[fee.student_id]
-                    const balance = Math.max(0, Number(fee.amount) - Number(fee.amount_paid))
+                    const balance = Number(fee.balance)
                     const isPaid = balance === 0
-                    const overdue = fee.due_date < toISODate() && !isPaid
+                    const isPartial = !isPaid && (
+                      Number(fee.amount_paid) > 0 || Number(fee.discount_total ?? 0) > 0
+                    )
+                    const status = isPaid ? 'Paid' : isPartial ? 'Partial' : 'Unpaid'
+                    const badge = isPaid
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : isPartial ? 'bg-amber-50 text-amber-800' : 'bg-rose-50 text-rose-700'
                     return (
                       <tr key={fee.id} className="cursor-pointer hover:bg-white/45" onClick={() => setHistoryStudentId(student.id)}>
-                        <td className="px-4 py-3.5"><button type="button" onClick={(event) => { event.stopPropagation(); setHistoryStudentId(student.id) }} className="text-left font-semibold text-night-900 underline-offset-2 hover:underline">{student.name}</button><p className="mt-0.5 text-xs text-ink/45">{fee.title}</p></td>
-                        <td className="px-4 py-3.5">{student.roll_no ?? '–'}</td>
-                        <td className="px-4 py-3.5">{student.admission_no ?? '–'}</td>
-                        <td className="px-4 py-3.5">{student.className}</td>
-                        <td className="px-4 py-3.5">{monthLabel((fee.fee_month ?? fee.due_date).slice(0, 7))}</td>
-                        <td className="px-4 py-3.5">{pkr(fee.amount)}</td>
+                        <td className="px-4 py-3.5"><span className="block">{student.roll_no ?? '–'}</span><span className="mt-0.5 block text-xs text-ink/50">{student.admission_no ?? '–'}</span></td>
+                        <td className="px-4 py-3.5"><button type="button" onClick={(event) => { event.stopPropagation(); setHistoryStudentId(student.id) }} className="text-left font-semibold text-night-900 underline-offset-2 hover:underline">{student.name}</button><p className="mt-0.5 text-xs text-ink/45">{student.className}</p></td>
+                        <td className="px-4 py-3.5"><span className="block">{monthLabel((fee.fee_month ?? fee.due_date).slice(0, 7))}</span><span className="mt-0.5 block text-xs text-ink/50">{fee.title}</span></td>
+                        <td className="px-4 py-3.5">{pkr(Number(fee.amount) + Number(fee.late_fine_total ?? 0))}</td>
                         <td className="px-4 py-3.5">{pkr(fee.amount_paid)}</td>
                         <td className="px-4 py-3.5 font-medium">{pkr(balance)}</td>
-                        <td className="px-4 py-3.5"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${isPaid ? 'bg-emerald-50 text-emerald-700' : overdue ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-800'}`}>{isPaid ? 'Paid' : overdue ? 'Overdue' : 'Unpaid'}</span></td>
-                        <td className="px-4 py-3.5">{!isPaid && <button type="button" onClick={(event) => { event.stopPropagation(); setPaymentFeeId(fee.id) }} className="rounded-lg bg-night-900 px-3 py-2 text-xs font-medium text-white">Record Payment</button>}</td>
+                        <td className="px-4 py-3.5"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${badge}`}>{status}</span></td>
+                        <td className="px-4 py-3.5">{!isPaid && <button type="button" onClick={(event) => { event.stopPropagation(); setPaymentFeeId(fee.id) }} className="rounded-lg bg-night-900 px-3 py-2 text-xs font-medium text-white">Collect Payment</button>}</td>
                       </tr>
                     )
                   })}
-                  {!visibleRows.length && <tr><td colSpan="10" className="px-5 py-10 text-center text-ink/50">No fee records match this search and status filter.</td></tr>}
+                  {!visibleRows.length && <tr><td colSpan="8" className="px-5 py-10 text-center text-ink/50">No fee records match this search and status filter.</td></tr>}
                 </tbody>
               </table>
             </div>

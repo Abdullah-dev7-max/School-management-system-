@@ -84,12 +84,13 @@ create table if not exists fees (
   title        text          not null,
   amount       numeric(10,2) not null check (amount >= 0),
   amount_paid  numeric(10,2) not null default 0 check (amount_paid >= 0),
+  discount_total numeric(10,2) not null default 0 check (discount_total >= 0),
+  late_fine_total numeric(10,2) not null default 0 check (late_fine_total >= 0),
   due_date     date          not null,
   fee_month    date,
   paid_on      date,
   status       fee_status    not null default 'pending',
-  created_at   timestamptz   not null default now(),
-  check (amount_paid <= amount)
+  created_at   timestamptz   not null default now()
 );
 
 create table if not exists marks (
@@ -119,11 +120,16 @@ create sequence if not exists public.fee_receipt_seq;
 create table if not exists fee_payments (
   id         uuid primary key default gen_random_uuid(),
   fee_id     uuid not null references fees(id) on delete cascade,
-  amount     numeric(10,2) not null check (amount > 0),
+  amount     numeric(10,2) not null check (amount >= 0),
   paid_on    date not null default current_date,
+  discount   numeric(10,2) not null default 0 check (discount >= 0),
+  late_fine  numeric(10,2) not null default 0 check (late_fine >= 0),
+  payment_mode text not null default 'Cash'
+    check (payment_mode in ('Cash', 'Bank Transfer', 'Easypaisa/JazzCash', 'Cheque')),
   receipt_no text not null unique default ('FEE-' || lpad(nextval('public.fee_receipt_seq')::text, 10, '0')),
   remaining_balance numeric(10, 2),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  check (amount + discount > 0)
 );
 
 -- ---------- 3. Indexes ----------
