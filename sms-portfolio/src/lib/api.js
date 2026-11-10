@@ -54,8 +54,8 @@ export async function fetchAdminOverview() {
 }
 
 export async function fetchInstituteSettings() {
-  const { data, error } = await supabase.from('institute_settings').select('school_name, address, contact_email, academic_year').eq('id', true).maybeSingle()
-  if (error) throw new Error(error.message)
+  const { data, error } = await supabase.from('institute_settings').select('*').limit(1).single()
+  if (error && error.code !== 'PGRST116') throw new Error(error.message)
   return data ?? { school_name: '', address: '', contact_email: '', academic_year: '' }
 }
 
@@ -397,12 +397,12 @@ export async function fetchFeesPage(month) {
       .select('id, student_id, title, amount, amount_paid, due_date, fee_month, status')
       .or(`fee_month.eq.${feeMonth},and(fee_month.is.null,due_date.gte.${feeMonth},due_date.lt.${nextMonth})`)
       .order('due_date'),
-    supabase.from('institute_settings').select('school_name').eq('id', true).maybeSingle(),
+    supabase.from('institute_settings').select('*').limit(1).single(),
   ])
   const classes = unwrap(classResult)
   const studentRows = unwrap(studentResult)
   const fees = unwrap(feeResult)
-  const setting = unwrap(settingResult)
+  const setting = settingResult.error?.code === 'PGRST116' ? null : unwrap(settingResult)
   const profiles = unwrap(
     studentRows.length
       ? await supabase
