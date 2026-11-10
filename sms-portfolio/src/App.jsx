@@ -100,6 +100,9 @@ export default function App() {
       </Route>
       <Route path="student" element={<RequireRole role="student"><Layout /></RequireRole>}>
         <Route index element={<StudentDashboard />} />
+        {['fees', 'marks', 'attendance', 'timetable', 'announcements', 'notes'].map((section) => (
+          <Route key={section} path={section} element={<StudentDashboard />} />
+        ))}
       </Route>
       <Route path="parent" element={<RequireRole role="parent"><Layout /></RequireRole>}>
         <Route index element={<RoleDashboard />} />
@@ -115,6 +118,9 @@ export default function App() {
               <Route path="announcements" element={<TeacherAnnouncements />} />
             </>
           )}
+          {role === 'student' && ['fees', 'marks', 'attendance', 'timetable', 'announcements', 'notes'].map((section) => (
+            <Route key={section} path={section} element={<StudentDashboard />} />
+          ))}
         </Route>
       ))}
       <Route path="login" element={<Navigate to={roleHome[profile.role] ?? '/'} replace />} />

@@ -57,7 +57,15 @@ export const ROLES = {
     description: 'View your academic and attendance records',
     icon: Award,
     accent: 'from-emerald-500 to-sky-400',
-    nav: [{ to: '/student', label: 'Dashboard', icon: LayoutDashboard }],
+    nav: [
+      { to: '/student-dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { to: '/student-dashboard/fees', label: 'Fees', icon: Wallet },
+      { to: '/student-dashboard/marks', label: 'Marks', icon: Award },
+      { to: '/student-dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
+      { to: '/student-dashboard/timetable', label: 'Timetable', icon: Clock3 },
+      { to: '/student-dashboard/announcements', label: 'Announcements', icon: Megaphone },
+      { to: '/student-dashboard/notes', label: 'Notes', icon: FileText },
+    ],
   },
   parent: {
     id: 'parent',
