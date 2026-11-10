@@ -30,10 +30,11 @@ In Supabase **SQL Editor**, run these scripts in order:
 6. `database/multirole_auth_migration.sql`
 7. `database/login_profile_link_migration.sql`
 8. `database/role_password_auth_migration.sql`
-9. `database/role_password_column_migration.sql`
-10. `database/role_plaintext_password_migration.sql`
-11. `database/fee_management_migration.sql`
-12. `database/accountant_fee_collection_migration.sql`
+9. `database/role_sessions_migration.sql`
+10. `database/role_password_column_migration.sql`
+11. `database/role_plaintext_password_migration.sql`
+12. `database/fee_management_migration.sql`
+13. `database/accountant_fee_collection_migration.sql`
 
 These scripts are safe to rerun and do not reset existing tables. The
 production security migration removes only the former application's known

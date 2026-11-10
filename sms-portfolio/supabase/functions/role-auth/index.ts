@@ -72,17 +72,17 @@ Deno.serve(async (request) => {
         .eq('role', input.role)
         .maybeSingle()
       if (userError) throw userError
+      if (!user) return response({ error: 'Invalid email or password.' }, 401)
 
       const table = input.role === 'teacher' ? 'teachers' : 'students'
       const { data: account, error: accountError } = await admin
         .from(table)
         .select('password, status')
-        .eq('user_id', user?.id ?? '')
+        .eq('user_id', user.id)
         .maybeSingle()
       if (accountError) throw accountError
       if (
-        !user
-        || !account
+        !account
         || account.status !== 'active'
         || account.password !== input.password
       ) {
