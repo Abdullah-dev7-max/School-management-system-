@@ -31,10 +31,11 @@ In Supabase **SQL Editor**, run these scripts in order:
 7. `database/login_profile_link_migration.sql`
 8. `database/role_password_auth_migration.sql`
 9. `database/role_sessions_migration.sql`
-10. `database/role_password_column_migration.sql`
-11. `database/role_plaintext_password_migration.sql`
-12. `database/fee_management_migration.sql`
-13. `database/accountant_fee_collection_migration.sql`
+10. `database/class_notes_migration.sql`
+11. `database/role_password_column_migration.sql`
+12. `database/role_plaintext_password_migration.sql`
+13. `database/fee_management_migration.sql`
+14. `database/accountant_fee_collection_migration.sql`
 
 These scripts are safe to rerun and do not reset existing tables. The
 production security migration removes only the former application's known
@@ -119,10 +120,14 @@ npm run preview
   including class/section assignment.
 - Teachers (`/teachers`): create, view, update, and delete staff records.
 - Classes (`/classes`): create, view, update, and delete classes and assign
-  teachers. Deleting a class unassigns its students and removes its timetable.
+  teachers. A teacher sees only classes where they are selected as Class
+  teacher. Deleting a class unassigns its students and removes its timetable.
 - Attendance (`/attendance`): enter and edit daily attendance by class/date.
 - Marks (`/marks`): enter and edit examination marks by class, subject, and
   exam.
+- Teacher workspace (`/teacher-dashboard`): take attendance, enter examination
+  marks, and upload class notes. Private note files are limited to 10 MB and
+  can be downloaded only by students in the assigned class.
 - Fees (`/fees`): issue student vouchers in PKR, record partial or full
   payments, and review outstanding balances and payment history.
 - Settings (`/settings`): update the administrator's database profile and

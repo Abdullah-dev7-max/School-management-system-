@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { CalendarCheck, ClipboardList, GraduationCap, School } from 'lucide-react'
+import { Award, CalendarCheck, ClipboardList, FileText, GraduationCap, School } from 'lucide-react'
 import { useRole } from '../context/RoleContext.jsx'
 import { useAsync } from '../hooks/useAsync.js'
 import { fetchRoleDashboard } from '../lib/api.js'
@@ -57,7 +57,7 @@ export default function TeacherDashboard() {
 
           <div className="grid gap-5 xl:grid-cols-2">
             <GlassCard className="p-5 sm:p-6">
-              <SectionHeader title="Assigned classes" description="Your classes and active student totals" />
+              <SectionHeader title="Assigned classes" description="Classes linked to you by the administrator" />
               <ul className="mt-4 divide-y divide-ink/5">
                 {classes.map((classItem) => (
                   <li key={classItem.id} className="flex items-center justify-between gap-3 py-3 text-sm">
@@ -65,7 +65,7 @@ export default function TeacherDashboard() {
                     <Badge tone="brand">{students.filter((student) => student.class_id === classItem.id).length} students</Badge>
                   </li>
                 ))}
-                {!classes.length && <li className="py-8 text-center text-sm text-ink/55">No classes are assigned to your account.</li>}
+                {!classes.length && <li className="py-8 text-center text-sm text-ink/55">No classes are assigned yet. Ask the administrator to open Classes, edit each class, and select you as its Class teacher.</li>}
               </ul>
             </GlassCard>
 
@@ -88,10 +88,18 @@ export default function TeacherDashboard() {
 
           <GlassCard className="p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <SectionHeader title="Faculty tools" description="Manage daily attendance for your assigned classes" />
-              <Link to="/teacher-dashboard/attendance" className="inline-flex h-11 items-center gap-2 rounded-xl bg-night-900 px-4 text-sm font-medium text-white">
-                <ClipboardList className="h-4 w-4" />Take attendance
-              </Link>
+              <SectionHeader title="Faculty tools" description="Take attendance, record exam marks, and share learning notes with your classes." />
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link to="/teacher-dashboard/attendance" className="inline-flex h-11 items-center gap-2 rounded-xl bg-night-900 px-4 text-sm font-medium text-white">
+                  <ClipboardList className="h-4 w-4" />Take attendance
+                </Link>
+                <Link to="/teacher-dashboard/marks" className="inline-flex h-11 items-center gap-2 rounded-xl border border-ink/10 bg-white px-4 text-sm font-medium hover:bg-lilac-50">
+                  <Award className="h-4 w-4" />Enter exam marks
+                </Link>
+                <Link to="/teacher-dashboard/notes" className="inline-flex h-11 items-center gap-2 rounded-xl border border-ink/10 bg-white px-4 text-sm font-medium hover:bg-lilac-50">
+                  <FileText className="h-4 w-4" />Share class notes
+                </Link>
+              </div>
             </div>
           </GlassCard>
         </>

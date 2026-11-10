@@ -569,7 +569,10 @@ export async function recordFeePayment(fee, { amount, discount, lateFine, paidOn
   return data
 }
 
-export async function fetchMarksPage(classId, subject, exam) {
+export async function fetchMarksPage(classId, subject, exam, sessionToken = null) {
+  if (sessionToken) {
+    return invokeRoleAuth({ action: 'marks_sheet', token: sessionToken, classId, subject, exam })
+  }
   const classes = unwrap(await supabase.from('classes').select('id, name, section').order('name').order('section'))
   if (!classId) return { classes, roster: [] }
   const roster = unwrap(
@@ -605,8 +608,55 @@ export async function fetchMarksPage(classId, subject, exam) {
   }
 }
 
-export async function saveClassMarks(rows) {
+export async function saveClassMarks(rows, sessionToken = null, classId = null) {
+  if (sessionToken) {
+    return invokeRoleAuth({
+      action: 'save_marks',
+      token: sessionToken,
+      classId,
+      subject: rows[0]?.subject,
+      exam: rows[0]?.exam,
+      examDate: rows[0]?.exam_date,
+      maxScore: rows[0]?.max_score,
+      rows: rows.map(({ student_id, score }) => ({ student_id, score })),
+    })
+  }
   if (rows.length) unwrap(await supabase.from('marks').upsert(rows, { onConflict: 'student_id,subject,exam' }))
+}
+
+export async function fetchTeacherNotes(sessionToken) {
+  return invokeRoleAuth({ action: 'teacher_notes', token: sessionToken })
+}
+
+export async function uploadTeacherNote({ sessionToken, classId, title, subject, file }) {
+  const upload = await invokeRoleAuth({
+    action: 'create_note_upload',
+    token: sessionToken,
+    classId,
+    fileName: file.name,
+    contentType: file.type,
+    fileSize: file.size,
+  })
+  const { error: uploadError } = await supabase.storage
+    .from('class-notes')
+    .uploadToSignedUrl(upload.path, upload.token, file, { contentType: file.type, upsert: false })
+  if (uploadError) throw new Error(uploadError.message)
+  return invokeRoleAuth({
+    action: 'save_note',
+    token: sessionToken,
+    classId,
+    title,
+    subject,
+    fileName: file.name,
+    contentType: file.type,
+    fileSize: file.size,
+    storagePath: upload.path,
+  })
+}
+
+export async function openClassNote(sessionToken, noteId) {
+  const { signedUrl } = await invokeRoleAuth({ action: 'download_note', token: sessionToken, noteId })
+  window.location.assign(signedUrl)
 }
 
 export async function saveAttendance(rows, sessionToken, classId, date) {

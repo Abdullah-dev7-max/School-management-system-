@@ -1,9 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { CalendarCheck, GraduationCap, Wallet } from 'lucide-react'
+import { BookOpen, CalendarCheck, Download, GraduationCap, Wallet } from 'lucide-react'
 import { useRole } from '../context/RoleContext.jsx'
 import { useAsync } from '../hooks/useAsync.js'
-import { fetchRoleDashboard } from '../lib/api.js'
+import { fetchRoleDashboard, openClassNote } from '../lib/api.js'
 import { formatDate, pkr } from '../lib/format.js'
 import Badge from '../components/ui/Badge.jsx'
 import GlassCard from '../components/ui/GlassCard.jsx'
@@ -15,6 +15,8 @@ import { Skeleton } from '../components/ui/States.jsx'
 export default function StudentDashboard() {
   const { profile, session } = useRole()
   const navigate = useNavigate()
+  const [noteError, setNoteError] = useState('')
+  const [openingNoteId, setOpeningNoteId] = useState('')
   const hasRoleSession = Boolean(window.localStorage.getItem('scholara.role.session') && session?.token)
   const dashboard = useAsync(
     () => fetchRoleDashboard(profile, session?.token),
@@ -28,6 +30,16 @@ export default function StudentDashboard() {
   const attendance = dashboard.data?.attendance ?? []
   const present = attendance.filter((record) => record.status === 'present' || record.status === 'late').length
   const attendanceRate = attendance.length ? Math.round((present / attendance.length) * 100) : null
+  const openNote = async (noteId) => {
+    setOpeningNoteId(noteId)
+    setNoteError('')
+    try {
+      await openClassNote(session.token, noteId)
+    } catch (error) {
+      setNoteError(error.message)
+      setOpeningNoteId('')
+    }
+  }
 
   useEffect(() => {
     if (dashboard.error?.status === 401 || dashboard.error?.status === 403) {
@@ -120,6 +132,28 @@ export default function StudentDashboard() {
                 </li>
               ))}
               {!attendance.length && <li className="py-8 text-center text-sm text-ink/55">No attendance records are available.</li>}
+            </ul>
+          </GlassCard>
+
+          <GlassCard className="overflow-hidden">
+            <div className="p-5 sm:p-6"><SectionHeader title="Class notes" description="Learning materials shared by your teacher" /></div>
+            {noteError && <p role="alert" className="mx-5 rounded-xl bg-rose-50 p-3 text-sm text-rose-700 sm:mx-6">{noteError}</p>}
+            <ul className="divide-y divide-ink/5 border-t border-white/70 px-5 sm:px-6">
+              {(dashboard.data.notes ?? []).map((note) => (
+                <li key={note.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-100 text-sky-700"><BookOpen className="h-5 w-5" /></span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{note.title}</p>
+                      <p className="mt-0.5 truncate text-xs text-ink/55">{note.subject} · {note.file_name} · {formatDate(note.created_at)}</p>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => openNote(note.id)} disabled={openingNoteId === note.id} className="inline-flex h-9 items-center gap-2 rounded-xl border border-ink/10 bg-white px-3 text-sm font-medium hover:bg-lilac-50 disabled:opacity-50">
+                    <Download className="h-4 w-4" />{openingNoteId === note.id ? 'Opening…' : 'Open notes'}
+                  </button>
+                </li>
+              ))}
+              {!dashboard.data.notes?.length && <li className="py-9 text-center text-sm text-ink/55">Your teacher has not shared any notes yet.</li>}
             </ul>
           </GlassCard>
         </>

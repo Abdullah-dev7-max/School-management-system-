@@ -14,6 +14,7 @@ import Attendance from './pages/Attendance.jsx'
 import AttendanceOverview from './pages/admin/AttendanceOverview.jsx'
 import Fees from './pages/Fees.jsx'
 import Marks from './pages/Marks.jsx'
+import TeacherNotes from './pages/TeacherNotes.jsx'
 import Settings from './pages/Settings.jsx'
 import Placeholder from './pages/Placeholder.jsx'
 import { useRole } from './context/RoleContext.jsx'
@@ -90,6 +91,8 @@ export default function App() {
       <Route path="teacher" element={<RequireRole role="teacher"><Layout /></RequireRole>}>
         <Route index element={<TeacherDashboard />} />
         <Route path="attendance" element={<Attendance />} />
+        <Route path="marks" element={<Marks />} />
+        <Route path="notes" element={<TeacherNotes />} />
       </Route>
       <Route path="student" element={<RequireRole role="student"><Layout /></RequireRole>}>
         <Route index element={<StudentDashboard />} />
@@ -100,7 +103,13 @@ export default function App() {
       {['teacher', 'student'].map((role) => (
         <Route key={`${role}-dashboard`} path={`${role}-dashboard`} element={<RequireRole role={role}><Layout /></RequireRole>}>
           <Route index element={role === 'teacher' ? <TeacherDashboard /> : <StudentDashboard />} />
-          {role === 'teacher' && <Route path="attendance" element={<Attendance />} />}
+          {role === 'teacher' && (
+            <>
+              <Route path="attendance" element={<Attendance />} />
+              <Route path="marks" element={<Marks />} />
+              <Route path="notes" element={<TeacherNotes />} />
+            </>
+          )}
         </Route>
       ))}
       <Route path="login" element={<Navigate to={roleHome[profile.role] ?? '/'} replace />} />

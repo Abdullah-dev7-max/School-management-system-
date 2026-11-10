@@ -97,7 +97,7 @@ export default function Attendance() {
         {!sheet.data ? (
           <div className="mt-5 space-y-2">{[0, 1, 2].map((item) => <Skeleton key={item} className="h-16" />)}</div>
         ) : !roster.length ? (
-          <p className="py-12 text-center text-sm text-ink/55">{classId ? 'No active students are assigned to this class.' : 'Create a class to take attendance.'}</p>
+          <p className="py-12 text-center text-sm text-ink/55">{classId ? 'No active students are assigned to this class.' : session?.custom ? 'No classes are assigned to you yet. Ask the administrator to select you as the Class teacher in the Classes page.' : 'Create a class to take attendance.'}</p>
         ) : (
           <ul className="mt-5 divide-y divide-ink/5 rounded-2xl bg-white/50">
             {roster.map((student) => (

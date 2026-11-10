@@ -8,8 +8,11 @@ import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
 import { Skeleton } from '../components/ui/States.jsx'
 import { Field, FORM_BUTTON, FormError, ManagementError, SelectField } from '../components/admin/ManagementUi.jsx'
+import { useRole } from '../context/RoleContext.jsx'
 
 export default function Marks() {
+  const { role, session } = useRole()
+  const roleSession = role === 'teacher' && session?.custom ? session.token : null
   const [classId, setClassId] = useState('')
   const [subject, setSubject] = useState('')
   const [exam, setExam] = useState('')
@@ -17,7 +20,7 @@ export default function Marks() {
   const [maxScore, setMaxScore] = useState('')
   const [scores, setScores] = useState({})
   const [saveState, setSaveState] = useState({ loading: false, error: '', message: '' })
-  const sheet = useAsync(() => fetchMarksPage(classId, subject, exam), [classId, subject, exam], ['classes', 'students', 'users', 'marks'])
+  const sheet = useAsync(() => fetchMarksPage(classId, subject, exam, roleSession), [classId, subject, exam, roleSession], ['classes', 'students', 'users', 'marks'])
   const classes = sheet.data?.classes ?? []
   const roster = sheet.data?.roster ?? []
   const max = Number(maxScore)
@@ -78,7 +81,7 @@ export default function Marks() {
     }
     setSaveState({ loading: true, error: '', message: '' })
     try {
-      await saveClassMarks(rows)
+      await saveClassMarks(rows, roleSession, classId)
       setSaveState({ loading: false, error: '', message: `Saved ${rows.length} ${subject} marks for ${exam}.` })
       sheet.reload()
     } catch (error) {
@@ -112,7 +115,7 @@ export default function Marks() {
         {!sheet.data ? (
           <div className="space-y-2 p-5">{[0, 1, 2].map((item) => <Skeleton key={item} className="h-16" />)}</div>
         ) : !roster.length ? (
-          <p className="border-t border-white/70 px-6 py-12 text-center text-sm text-ink/55">{classId ? 'No active students are assigned to this class.' : 'Create a class to enter marks.'}</p>
+          <p className="border-t border-white/70 px-6 py-12 text-center text-sm text-ink/55">{classId ? 'No active students are assigned to this class.' : roleSession ? 'No classes are assigned to you yet. Ask the administrator to select you as the Class teacher in the Classes page.' : 'Create a class to enter marks.'}</p>
         ) : (
           <div className="overflow-x-auto border-t border-white/70">
             <table className="w-full min-w-[700px] text-left text-sm">

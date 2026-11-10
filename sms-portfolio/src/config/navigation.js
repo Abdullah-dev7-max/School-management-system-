@@ -9,6 +9,7 @@ import {
   Users,
   Wallet,
   ClipboardList,
+  FileText,
 } from 'lucide-react'
 
 /**
@@ -41,7 +42,9 @@ export const ROLES = {
     accent: 'from-sky-500 to-lilac-400',
     nav: [
       { to: '/teacher', label: 'Dashboard', icon: LayoutDashboard },
-      { to: '/teacher/attendance', label: 'Attendance', icon: ClipboardList },
+      { to: '/teacher-dashboard/attendance', label: 'Attendance', icon: ClipboardList },
+      { to: '/teacher-dashboard/marks', label: 'Exam marks', icon: Award },
+      { to: '/teacher-dashboard/notes', label: 'Class notes', icon: FileText },
     ],
   },
   student: {
