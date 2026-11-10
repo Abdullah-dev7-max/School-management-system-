@@ -6,6 +6,7 @@ import { fetchInstituteSettings, saveInstituteSettings } from '../lib/api.js'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
 import { Field, FORM_BUTTON, FormError, ManagementError } from '../components/admin/ManagementUi.jsx'
+import LoadingScreen from '../components/ui/LoadingScreen.jsx'
 
 export default function Settings() {
   const { profile, updateProfileName } = useRole()
@@ -55,6 +56,7 @@ export default function Settings() {
   }
 
   if (settingsQuery.error) return <ManagementError error={settingsQuery.error} onRetry={settingsQuery.reload} />
+  if (settingsQuery.loading || !settingsQuery.data || !settings) return <LoadingScreen label="Loading institute settings" />
 
   return (
     <div className="space-y-5">
@@ -64,10 +66,7 @@ export default function Settings() {
       <GlassCard className="max-w-3xl p-5 sm:p-6">
         <h2 className="text-base font-semibold">Institute information</h2>
         <p className="mt-1 text-sm text-ink/55">These settings are stored in the institute database.</p>
-        {!settings ? (
-          <div className="mt-5 h-64 animate-pulse rounded-2xl bg-lilac-100/80" />
-        ) : (
-          <form onSubmit={submit} className="mt-5 space-y-4">
+        <form onSubmit={submit} className="mt-5 space-y-4">
             <Field label="Administrator full name" name="fullName" value={settings.fullName} onChange={change} maxLength={160} required />
             <Field label="School name" name="schoolName" value={settings.schoolName} onChange={change} maxLength={160} required />
             <label className="block text-sm font-medium">Address
@@ -84,8 +83,7 @@ export default function Settings() {
                 <Save className="mr-2 h-4 w-4" />{saving ? 'Saving…' : 'Save settings'}
               </button>
             </div>
-          </form>
-        )}
+        </form>
       </GlassCard>
     </div>
   )

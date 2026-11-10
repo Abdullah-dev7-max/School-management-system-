@@ -6,7 +6,7 @@ import { toISODate } from '../lib/format.js'
 import Badge from '../components/ui/Badge.jsx'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
-import { Skeleton } from '../components/ui/States.jsx'
+import LoadingScreen from '../components/ui/LoadingScreen.jsx'
 import { ManagementError, SelectField } from '../components/admin/ManagementUi.jsx'
 import { useRole } from '../context/RoleContext.jsx'
 
@@ -73,6 +73,7 @@ export default function Attendance() {
   }
 
   if (sheet.error) return <ManagementError error={sheet.error} onRetry={sheet.reload} />
+  if (sheet.loading || !sheet.data) return <LoadingScreen label="Preparing the class register" />
 
   return (
     <div className="space-y-5">
@@ -94,9 +95,7 @@ export default function Attendance() {
           <SectionHeader title="Class register" description={`${roster.length} students`} />
           <div className="flex flex-wrap gap-2"><Badge tone="success" dot>{counts.present} present</Badge><Badge tone="danger" dot>{counts.absent} absent</Badge><Badge tone="warning" dot>{counts.late} late</Badge><Badge tone="info" dot>{counts.excused} excused</Badge></div>
         </div>
-        {!sheet.data ? (
-          <div className="mt-5 space-y-2">{[0, 1, 2].map((item) => <Skeleton key={item} className="h-16" />)}</div>
-        ) : !roster.length ? (
+        {!roster.length ? (
           <p className="py-12 text-center text-sm text-ink/55">{classId ? 'No active students are assigned to this class.' : session?.custom ? 'No classes are assigned to you yet. Ask the administrator to select you as the Class teacher in the Classes page.' : 'Create a class to take attendance.'}</p>
         ) : (
           <ul className="mt-5 divide-y divide-ink/5 rounded-2xl bg-white/50">

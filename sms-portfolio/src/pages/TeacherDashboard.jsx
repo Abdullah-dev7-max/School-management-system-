@@ -10,7 +10,7 @@ import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
 import StatCard from '../components/ui/StatCard.jsx'
 import { ManagementError } from '../components/admin/ManagementUi.jsx'
-import { Skeleton } from '../components/ui/States.jsx'
+import LoadingScreen from '../components/ui/LoadingScreen.jsx'
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 
@@ -37,19 +37,14 @@ export default function TeacherDashboard() {
 
   if (!hasRoleSession) return <Navigate to="/login" replace />
   if (dashboard.error) return <ManagementError error={dashboard.error} onRetry={dashboard.reload} />
+  if (dashboard.loading || !dashboard.data) return <LoadingScreen label="Loading your teacher dashboard" />
 
   return (
     <div className="space-y-5">
       <GlassCard className="p-5 sm:p-6">
         <SectionHeader title={`Welcome, ${profile.full_name}`} description={`${dashboard.data?.teacher?.subject ?? 'Faculty'} · Teacher dashboard`} />
       </GlassCard>
-      {!dashboard.data ? (
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[0, 1, 2].map((item) => <Skeleton key={item} className="h-32 rounded-3xl" />)}
-        </div>
-      ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-3">
             <StatCard icon={School} label="Assigned classes" value={classes.length} hint={dashboard.data.teacher?.subject || 'Teaching department'} />
             <StatCard icon={GraduationCap} label="Students" value={students.length} hint="Active students in your classes" accent="from-emerald-500 to-emerald-300" />
             <StatCard icon={CalendarCheck} label="Recent attendance" value={attendanceRate == null ? '—' : `${attendanceRate}%`} hint={`${attendance.length} recent records`} accent="from-sky-500 to-sky-300" />
@@ -105,8 +100,6 @@ export default function TeacherDashboard() {
               </div>
             </div>
           </GlassCard>
-        </>
-      )}
     </div>
   )
 }

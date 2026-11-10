@@ -20,6 +20,7 @@ import Settings from './pages/Settings.jsx'
 import Placeholder from './pages/Placeholder.jsx'
 import { useRole } from './context/RoleContext.jsx'
 import { LogOut } from 'lucide-react'
+import LoadingScreen from './components/ui/LoadingScreen.jsx'
 
 const roleHome = {
   admin: '/admin',
@@ -40,7 +41,7 @@ export default function App() {
 
   if (location.pathname === '/reset-password' && initialized) return <ResetPasswordPage />
   if (!initialized || profileLoading || (session?.user && !profile && !profileError)) {
-    return <main className="grid min-h-screen place-items-center text-sm text-ink/60">Loading secure session…</main>
+    return <LoadingScreen label="Verifying your secure session" />
   }
   if (profileError) {
     return (

@@ -7,6 +7,7 @@ import Badge from '../components/ui/Badge.jsx'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
 import { Field, FORM_BUTTON, FormError, ManagementError, ManagementModal, SelectField } from '../components/admin/ManagementUi.jsx'
+import LoadingScreen from '../components/ui/LoadingScreen.jsx'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 const INITIAL = {
@@ -121,6 +122,7 @@ export default function Timetable() {
   }
 
   if (query.error) return <ManagementError error={query.error} onRetry={query.reload} />
+  if (query.loading || !query.data) return <LoadingScreen label="Loading the class timetable" />
 
   return (
     <div className="space-y-5">
@@ -132,9 +134,7 @@ export default function Timetable() {
           action={<button type="button" onClick={() => { setEditing(null); setDialogOpen(true) }} disabled={!classes.length} className="inline-flex h-10 items-center gap-2 rounded-xl bg-night-900 px-4 text-sm font-medium text-white disabled:opacity-50"><Plus className="h-4 w-4" />Add lesson</button>}
         />
       </GlassCard>
-      {!query.data ? (
-        <GlassCard className="p-8 text-center text-sm text-ink/55">Loading timetable…</GlassCard>
-      ) : !classes.length ? (
+      {!classes.length ? (
         <GlassCard className="p-10 text-center text-sm text-ink/55">Create a class before setting up the timetable.</GlassCard>
       ) : !slots.length ? (
         <GlassCard className="p-10 text-center text-sm text-ink/55">No timetable lessons yet. Add a lesson to publish a schedule to its class.</GlassCard>

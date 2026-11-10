@@ -6,7 +6,8 @@ import { fetchAdminOverview, fetchClassesPage, fetchStudentDirectory } from '../
 import { attendanceRate, dailyAttendance, feeState, groupBy, monthlyRevenue } from '../../lib/analytics.js'
 import { pct, pkrCompact } from '../../lib/format.js'
 import StatCard from '../../components/ui/StatCard.jsx'
-import { ErrorState, Skeleton } from '../../components/ui/States.jsx'
+import { ErrorState } from '../../components/ui/States.jsx'
+import LoadingScreen from '../../components/ui/LoadingScreen.jsx'
 import AttendanceChart from '../../components/admin/AttendanceChart.jsx'
 import RevenueChart from '../../components/admin/RevenueChart.jsx'
 import StudentTable from '../../components/admin/StudentTable.jsx'
@@ -92,19 +93,8 @@ export default function AdminDashboard() {
     )
   }
 
-  if (!overview.data || !directory.data || !classes.data) {
-    return (
-      <div className="space-y-6" aria-busy="true" aria-label="Loading dashboard">
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-32 rounded-3xl" />)}
-        </div>
-        <div className="grid gap-6 xl:grid-cols-5">
-          <Skeleton className="h-96 rounded-3xl xl:col-span-3" />
-          <Skeleton className="h-96 rounded-3xl xl:col-span-2" />
-        </div>
-        <Skeleton className="h-96 rounded-3xl" />
-      </div>
-    )
+  if (overview.loading || directory.loading || classes.loading || !overview.data || !directory.data || !classes.data) {
+    return <LoadingScreen label="Loading your school dashboard" />
   }
 
   return (

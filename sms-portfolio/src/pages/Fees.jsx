@@ -6,7 +6,8 @@ import { formatDate, pkr, toISODate } from '../lib/format.js'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
 import StatCard from '../components/ui/StatCard.jsx'
-import { ErrorState, Skeleton } from '../components/ui/States.jsx'
+import { ErrorState } from '../components/ui/States.jsx'
+import LoadingScreen from '../components/ui/LoadingScreen.jsx'
 
 const FIELD = 'mt-1.5 h-11 w-full rounded-xl border border-ink/10 bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-lilac-500/60'
 const BUTTON = 'inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-night-900 px-4 text-sm font-medium text-white disabled:opacity-50'
@@ -548,6 +549,7 @@ export default function Fees() {
   }
 
   if (page.error) return <ErrorState error={page.error} onRetry={page.reload} />
+  if (page.loading || !data) return <LoadingScreen label="Loading fee records" />
   const visibleFeeIds = new Set(visibleRows.map((fee) => fee.id))
   const visiblePayments = (data?.payments ?? []).filter((payment) =>
     payment.paid_on.startsWith(month) && visibleFeeIds.has(payment.fee_id)
@@ -581,10 +583,7 @@ export default function Fees() {
         </div>
       </GlassCard>
 
-      {!data ? (
-        <div className="grid gap-4 sm:grid-cols-3">{[0, 1, 2].map((item) => <Skeleton key={item} className="h-32 rounded-3xl" />)}</div>
-      ) : (
-        <>
+      <>
           <div className="grid gap-4 sm:grid-cols-3">
             <StatCard icon={Wallet} label="Collected this month" value={pkr(collected)} hint={`${monthLabel(month)} · current ledger filters`} accent="from-emerald-500 to-emerald-300" />
             <StatCard icon={ReceiptText} label="Pending receivables" value={pkr(pending)} hint="Remaining balance across all active invoices" accent="from-amber-500 to-amber-300" />
@@ -753,8 +752,7 @@ export default function Fees() {
               </div>
             </GlassCard>
           )}
-        </>
-      )}
+      </>
       {classSettingsOpen && data && <ClassFeeSettings classes={data.classes} onSave={onSaveClassFee} onClose={() => setClassSettingsOpen(false)} />}
       {voucherOpen && data && <IssueVoucherDialog key={voucherStudentId || 'manual'} students={data.students} initialStudentId={voucherStudentId} onSave={page.reload} onClose={() => { setVoucherOpen(false); setVoucherStudentId('') }} />}
       {bulkVoucherOpen && data && <BulkVoucherDialog classes={data.classes} onSave={onGenerateVouchers} onClose={() => setBulkVoucherOpen(false)} />}

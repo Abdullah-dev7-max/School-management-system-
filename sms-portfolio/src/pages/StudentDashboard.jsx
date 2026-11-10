@@ -10,7 +10,7 @@ import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
 import StatCard from '../components/ui/StatCard.jsx'
 import { ManagementError } from '../components/admin/ManagementUi.jsx'
-import { Skeleton } from '../components/ui/States.jsx'
+import LoadingScreen from '../components/ui/LoadingScreen.jsx'
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 const ANNOUNCEMENT_TYPES = {
@@ -248,9 +248,7 @@ export default function StudentDashboard() {
 
   if (!hasRoleSession) return <Navigate to="/login" replace />
   if (dashboard.error) return <ManagementError error={dashboard.error} onRetry={dashboard.reload} />
-  if (!dashboard.data) {
-    return <div className="grid gap-4 sm:grid-cols-3">{[0, 1, 2].map((item) => <Skeleton key={item} className="h-32 rounded-3xl" />)}</div>
-  }
+  if (dashboard.loading || !dashboard.data) return <LoadingScreen label="Loading your student dashboard" />
 
   const panels = {
     fees: <FeesPanel fees={fees} payments={payments} />,

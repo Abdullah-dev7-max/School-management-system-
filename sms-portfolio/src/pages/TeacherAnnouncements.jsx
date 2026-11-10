@@ -8,6 +8,7 @@ import Badge from '../components/ui/Badge.jsx'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
 import { Field, FormError, ManagementError, SelectField } from '../components/admin/ManagementUi.jsx'
+import LoadingScreen from '../components/ui/LoadingScreen.jsx'
 
 const TYPES = [
   { value: 'test', label: 'Test' },
@@ -62,6 +63,7 @@ export default function TeacherAnnouncements() {
   }
 
   if (query.error) return <ManagementError error={query.error} onRetry={query.reload} />
+  if (query.loading || !query.data) return <LoadingScreen label="Loading class announcements" />
 
   return (
     <div className="space-y-5">
@@ -101,9 +103,7 @@ export default function TeacherAnnouncements() {
 
       <GlassCard className="overflow-hidden">
         <div className="p-5 sm:p-6"><SectionHeader title="Your announcements" description={`${announcements.length} updates shared with your classes`} /></div>
-        {!query.data ? (
-          <div className="border-t border-white/70 p-6 text-sm text-ink/55">Loading announcements…</div>
-        ) : !announcements.length ? (
+        {!announcements.length ? (
           <p className="border-t border-white/70 px-6 py-10 text-center text-sm text-ink/55">No announcements yet.</p>
         ) : (
           <ul className="divide-y divide-ink/5 border-t border-white/70 px-5 sm:px-6">

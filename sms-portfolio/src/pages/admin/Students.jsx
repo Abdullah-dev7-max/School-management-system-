@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Plus, Search, Trash2, UserRoundPen, Users, X } from 'lucide-react'
 import { useAsync } from '../../hooks/useAsync.js'
 import { createStudent, deleteStudent, fetchStudentsPage, updateStudent } from '../../lib/api.js'
-import { ErrorState, Skeleton } from '../../components/ui/States.jsx'
+import { ErrorState } from '../../components/ui/States.jsx'
+import LoadingScreen from '../../components/ui/LoadingScreen.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import GlassCard from '../../components/ui/GlassCard.jsx'
 import SectionHeader from '../../components/ui/SectionHeader.jsx'
@@ -178,6 +179,7 @@ export default function Students() {
 
   const students = studentsQuery.data?.students ?? []
   const classes = studentsQuery.data?.classes ?? []
+  if (studentsQuery.loading || !studentsQuery.data) return <LoadingScreen label="Loading students" />
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase()
@@ -269,14 +271,7 @@ export default function Students() {
         </div>
       )}
 
-      {studentsQuery.error ? (
-        <ErrorState error={studentsQuery.error} onRetry={studentsQuery.reload} />
-      ) : !studentsQuery.data ? (
-        <GlassCard className="space-y-3 p-5" aria-busy="true">
-          <Skeleton className="h-11" />
-          <Skeleton className="h-64" />
-        </GlassCard>
-      ) : (
+      {studentsQuery.error ? <ErrorState error={studentsQuery.error} onRetry={studentsQuery.reload} /> : (
         <GlassCard className="overflow-hidden">
           <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:p-5">
             <label className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-ink/10 bg-white px-3 text-ink/50 focus-within:ring-2 focus-within:ring-lilac-500/60">

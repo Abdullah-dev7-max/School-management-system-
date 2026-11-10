@@ -6,7 +6,7 @@ import { gradeFor } from '../lib/analytics.js'
 import Badge from '../components/ui/Badge.jsx'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
-import { Skeleton } from '../components/ui/States.jsx'
+import LoadingScreen from '../components/ui/LoadingScreen.jsx'
 import { Field, FORM_BUTTON, FormError, ManagementError, SelectField } from '../components/admin/ManagementUi.jsx'
 import { useRole } from '../context/RoleContext.jsx'
 
@@ -90,6 +90,7 @@ export default function Marks() {
   }
 
   if (sheet.error) return <ManagementError error={sheet.error} onRetry={sheet.reload} />
+  if (sheet.loading || !sheet.data) return <LoadingScreen label="Preparing the class marksheet" />
 
   return (
     <form onSubmit={submit} className="space-y-5">
@@ -112,9 +113,7 @@ export default function Marks() {
           <SectionHeader title="Student marks" description={`${result.count} of ${roster.length} marks entered`} />
           <Badge tone="info">Class average {result.average == null ? '–' : `${Math.round(result.average)}%`}</Badge>
         </div>
-        {!sheet.data ? (
-          <div className="space-y-2 p-5">{[0, 1, 2].map((item) => <Skeleton key={item} className="h-16" />)}</div>
-        ) : !roster.length ? (
+        {!roster.length ? (
           <p className="border-t border-white/70 px-6 py-12 text-center text-sm text-ink/55">{classId ? 'No active students are assigned to this class.' : roleSession ? 'No classes are assigned to you yet. Ask the administrator to select you as the Class teacher in the Classes page.' : 'Create a class to enter marks.'}</p>
         ) : (
           <div className="overflow-x-auto border-t border-white/70">

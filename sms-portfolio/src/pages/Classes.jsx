@@ -4,7 +4,7 @@ import { useAsync } from '../hooks/useAsync.js'
 import { createClass, deleteClass, fetchClassesPage, updateClass } from '../lib/api.js'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
-import { Skeleton } from '../components/ui/States.jsx'
+import LoadingScreen from '../components/ui/LoadingScreen.jsx'
 import { Field, FORM_BUTTON, FormError, ManagementError, ManagementModal, SelectField } from '../components/admin/ManagementUi.jsx'
 
 function ClassForm({ classItem, teachers, onClose, onSave }) {
@@ -86,6 +86,7 @@ export default function Classes() {
   }
 
   if (classesQuery.error) return <ManagementError error={classesQuery.error} onRetry={classesQuery.reload} />
+  if (classesQuery.loading || !classesQuery.data) return <LoadingScreen label="Loading classes" />
 
   return (
     <div className="space-y-5">
@@ -97,9 +98,7 @@ export default function Classes() {
           action={<button type="button" onClick={() => { setEditing(null); setDialogOpen(true) }} className="inline-flex h-10 items-center gap-2 rounded-xl bg-night-900 px-4 text-sm font-medium text-white"><Plus className="h-4 w-4" />Create new class</button>}
         />
       </GlassCard>
-      {!classesQuery.data ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((item) => <Skeleton key={item} className="h-44 rounded-3xl" />)}</div>
-      ) : classesQuery.data.classes.length === 0 ? (
+      {classesQuery.data.classes.length === 0 ? (
         <GlassCard className="p-12 text-center text-sm text-ink/55">No classes yet. Create a class to get started.</GlassCard>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

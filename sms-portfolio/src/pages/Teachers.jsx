@@ -5,7 +5,7 @@ import { createTeacher, deleteTeacher, fetchTeachersPage, updateTeacher } from '
 import Badge from '../components/ui/Badge.jsx'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
-import { Skeleton } from '../components/ui/States.jsx'
+import LoadingScreen from '../components/ui/LoadingScreen.jsx'
 import { Field, FORM_BUTTON, FormError, ManagementError, ManagementModal, SelectField } from '../components/admin/ManagementUi.jsx'
 
 const STATUS = {
@@ -143,6 +143,7 @@ export default function Teachers() {
   }
 
   if (teachersQuery.error) return <ManagementError error={teachersQuery.error} onRetry={teachersQuery.reload} />
+  if (teachersQuery.loading || !teachersQuery.data) return <LoadingScreen label="Loading teachers" />
 
   return (
     <div className="space-y-5">
@@ -155,10 +156,7 @@ export default function Teachers() {
           action={<button type="button" onClick={() => openForm()} className="inline-flex h-10 items-center gap-2 rounded-xl bg-night-900 px-4 text-sm font-medium text-white"><Plus className="h-4 w-4" />Add new teacher</button>}
         />
       </GlassCard>
-      {!teachersQuery.data ? (
-        <GlassCard className="space-y-3 p-5"><Skeleton className="h-11" /><Skeleton className="h-64" /></GlassCard>
-      ) : (
-        <GlassCard className="overflow-hidden">
+      <GlassCard className="overflow-hidden">
           <div className="p-4 sm:p-5">
             <label className="flex h-11 items-center gap-2 rounded-xl border border-ink/10 bg-white px-3 text-ink/50 focus-within:ring-2 focus-within:ring-lilac-500/60">
               <Search className="h-4 w-4" /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search teachers" placeholder="Search name, subject, email, or employee code" className="w-full bg-transparent text-sm text-ink outline-none" />
@@ -189,8 +187,7 @@ export default function Teachers() {
               </tbody>
             </table>
           </div>
-        </GlassCard>
-      )}
+      </GlassCard>
       {dialogOpen && <TeacherForm key={editing?.id ?? 'new'} teacher={editing} onClose={() => setDialogOpen(false)} onSave={save} />}
     </div>
   )

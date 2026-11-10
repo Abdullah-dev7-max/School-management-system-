@@ -8,6 +8,7 @@ import Badge from '../components/ui/Badge.jsx'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
 import { Field, FormError, ManagementError, SelectField } from '../components/admin/ManagementUi.jsx'
+import LoadingScreen from '../components/ui/LoadingScreen.jsx'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ACCEPTED_FILES = '.pdf,.doc,.docx,.ppt,.pptx,.txt,.jpg,.jpeg,.png'
@@ -60,6 +61,7 @@ export default function TeacherNotes() {
   }
 
   if (notesQuery.error) return <ManagementError error={notesQuery.error} onRetry={notesQuery.reload} />
+  if (notesQuery.loading || !notesQuery.data) return <LoadingScreen label="Loading class materials" />
 
   return (
     <div className="space-y-5">
@@ -101,9 +103,7 @@ export default function TeacherNotes() {
 
       <GlassCard className="overflow-hidden">
         <div className="p-5 sm:p-6"><SectionHeader title="Shared materials" description={`${notes.length} files uploaded by you`} /></div>
-        {!notesQuery.data ? (
-          <div className="border-t border-white/70 p-6 text-sm text-ink/55">Loading shared materials…</div>
-        ) : !notes.length ? (
+        {!notes.length ? (
           <p className="border-t border-white/70 px-6 py-10 text-center text-sm text-ink/55">You have not uploaded any notes yet.</p>
         ) : (
           <ul className="divide-y divide-ink/5 border-t border-white/70 px-5 sm:px-6">

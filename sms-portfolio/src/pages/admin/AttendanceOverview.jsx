@@ -6,7 +6,8 @@ import { toISODate } from '../../lib/format.js'
 import GlassCard from '../../components/ui/GlassCard.jsx'
 import SectionHeader from '../../components/ui/SectionHeader.jsx'
 import StatCard from '../../components/ui/StatCard.jsx'
-import { ErrorState, Skeleton } from '../../components/ui/States.jsx'
+import { ErrorState } from '../../components/ui/States.jsx'
+import LoadingScreen from '../../components/ui/LoadingScreen.jsx'
 
 function percentage(count, total) {
   return total ? `${Math.round((count / total) * 100)}%` : '0%'
@@ -78,6 +79,7 @@ export default function AttendanceOverview() {
   const totals = useMemo(() => attendanceCounts(data?.students ?? []), [data])
 
   if (report.error) return <ErrorState error={report.error} onRetry={report.reload} />
+  if (report.loading || !data) return <LoadingScreen label="Loading attendance overview" />
 
   return (
     <div className="space-y-5">
@@ -90,10 +92,7 @@ export default function AttendanceOverview() {
         </div>
       </GlassCard>
 
-      {!data ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-32 rounded-3xl" />)}</div>
-      ) : (
-        <>
+      <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard icon={Users} label="Total students" value={data.totalStudents} hint="Active student records" accent="from-lilac-500 to-lilac-300" />
             <StatCard icon={ClipboardCheck} label="Present" value={`${totals.present} · ${percentage(totals.present, data.totalStudents)}`} hint="Includes students marked late" accent="from-emerald-500 to-emerald-300" />
@@ -132,8 +131,7 @@ export default function AttendanceOverview() {
               </table>
             </div>
           </GlassCard>
-        </>
-      )}
+      </>
       <DetailDialog classItem={selectedClass} onClose={() => setSelectedClassId(null)} />
     </div>
   )
