@@ -134,7 +134,8 @@ begin
     amount = excluded.amount,
     due_date = excluded.due_date
   where public.fees.amount_paid = 0
-    and public.fees.discount_total = 0;
+    and public.fees.discount_total = 0
+    and public.fees.late_fine_total = 0;
 
   get diagnostics inserted_count = row_count;
   return inserted_count;
@@ -142,6 +143,76 @@ end;
 $$;
 revoke all on function public.ensure_monthly_fee_records(date) from public, anon;
 grant execute on function public.ensure_monthly_fee_records(date) to authenticated;
+
+create or replace function public.generate_monthly_fee_vouchers(
+  p_month date,
+  p_class_id uuid default null
+)
+returns integer
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  eligible_count integer;
+begin
+  if not public.is_admin() then
+    raise exception 'Administrator access is required.';
+  end if;
+  if p_month is null or p_month <> date_trunc('month', p_month)::date then
+    raise exception 'Fee month must be the first day of a month.';
+  end if;
+  if p_class_id is not null and not exists (
+    select 1 from public.classes where id = p_class_id
+  ) then
+    raise exception 'Selected class was not found.';
+  end if;
+
+  select count(*) into eligible_count
+  from public.students s
+  join public.classes c on c.id = s.class_id
+  where s.status = 'active'
+    and (p_class_id is null or s.class_id = p_class_id)
+    and c.monthly_fee is not null
+    and c.monthly_fee > 0
+    and c.fee_due_day is not null;
+
+  insert into public.fees (
+    student_id, title, amount, amount_paid, due_date, status, fee_month
+  )
+  select
+    s.id,
+    'Monthly tuition - ' || to_char(p_month, 'Mon YYYY'),
+    c.monthly_fee,
+    0,
+    make_date(
+      extract(year from p_month)::integer,
+      extract(month from p_month)::integer,
+      least(c.fee_due_day, extract(day from (p_month + interval '1 month - 1 day'))::integer)
+    ),
+    'pending'::public.fee_status,
+    p_month
+  from public.students s
+  join public.classes c on c.id = s.class_id
+  where s.status = 'active'
+    and (p_class_id is null or s.class_id = p_class_id)
+    and c.monthly_fee is not null
+    and c.monthly_fee > 0
+    and c.fee_due_day is not null
+  on conflict (student_id, fee_month) where fee_month is not null
+  do update set
+    title = excluded.title,
+    amount = excluded.amount,
+    due_date = excluded.due_date
+  where public.fees.amount_paid = 0
+    and public.fees.discount_total = 0
+    and public.fees.late_fine_total = 0;
+
+  return eligible_count;
+end;
+$$;
+revoke all on function public.generate_monthly_fee_vouchers(date, uuid) from public, anon;
+grant execute on function public.generate_monthly_fee_vouchers(date, uuid) to authenticated;
 
 drop function if exists public.record_fee_payment(uuid, numeric, date);
 drop function if exists public.record_fee_payment(uuid, numeric, date, numeric, numeric, text);

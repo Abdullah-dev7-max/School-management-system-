@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Plus, Printer, ReceiptText, Search, Users, Wallet, X } from 'lucide-react'
 import { useAsync } from '../hooks/useAsync.js'
-import { fetchFeesPage, issueFeeVoucher, recordFeePayment, updateClassFee } from '../lib/api.js'
+import { fetchFeesPage, generateMonthlyFeeVouchers, issueFeeVoucher, recordFeePayment, updateClassFee } from '../lib/api.js'
 import { formatDate, pkr, toISODate } from '../lib/format.js'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
@@ -149,6 +149,58 @@ function IssueVoucherDialog({ students, onSave, onClose }) {
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} disabled={saving} className="h-11 rounded-xl px-4 text-sm hover:bg-ink/5">Cancel</button>
           <button type="submit" disabled={saving || !students.length} className={BUTTON}>{saving ? 'Saving…' : 'Issue voucher'}</button>
+        </div>
+      </form>
+    </DialogFrame>
+  )
+}
+
+function BulkVoucherDialog({ classes, onSave, onClose }) {
+  const [month, setMonth] = useState(currentMonth)
+  const [classId, setClassId] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async (event) => {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      const generatedCount = await generateMonthlyFeeVouchers(month, classId || null)
+      await onSave(month)
+      if (generatedCount === 0) {
+        setError('No new vouchers were generated. Check that the selected class has a monthly fee and due day configured, and that eligible invoices do not already exist.')
+        setSaving(false)
+        return
+      }
+      onClose()
+    } catch (saveError) {
+      setError(saveError.message)
+      setSaving(false)
+    }
+  }
+
+  return (
+    <DialogFrame title="Generate monthly vouchers" description="Create invoices for active students in classes with monthly fees configured." onClose={onClose} maxWidth="max-w-xl">
+      <form onSubmit={submit} className="mt-5 space-y-4">
+        <label className="block text-sm font-medium">Billing month
+          <input type="month" min="2000-01" value={month} onChange={(event) => setMonth(event.target.value)} required className={FIELD} />
+        </label>
+        <label className="block text-sm font-medium">Class
+          <select value={classId} onChange={(event) => setClassId(event.target.value)} className={FIELD}>
+            <option value="">All configured classes</option>
+            {classes.map((classItem) => (
+              <option key={classItem.id} value={classItem.id}>
+                {classItem.name} {classItem.section} · {classItem.monthly_fee == null ? 'Monthly fee not set' : pkr(classItem.monthly_fee)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="rounded-xl bg-white/70 p-3 text-xs text-ink/60">Set each class's monthly fee and due day in “Set Class Fees” first. Existing invoices with payments or concessions are preserved.</p>
+        {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} disabled={saving} className="h-11 rounded-xl px-4 text-sm hover:bg-ink/5">Cancel</button>
+          <button type="submit" disabled={saving || !month} className={BUTTON}>{saving ? 'Generating…' : 'Generate vouchers'}</button>
         </div>
       </form>
     </DialogFrame>
@@ -304,10 +356,12 @@ function ReceiptDialog({ receipt, student, schoolName, month, onClose }) {
 
 export default function Fees() {
   const [month, setMonth] = useState(currentMonth)
+  const [activeTab, setActiveTab] = useState('ledger')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [classSettingsOpen, setClassSettingsOpen] = useState(false)
   const [voucherOpen, setVoucherOpen] = useState(false)
+  const [bulkVoucherOpen, setBulkVoucherOpen] = useState(false)
   const [paymentFeeId, setPaymentFeeId] = useState('')
   const [historyStudentId, setHistoryStudentId] = useState('')
   const [receiptInfo, setReceiptInfo] = useState(null)
@@ -346,6 +400,11 @@ export default function Fees() {
     await page.reload()
   }
 
+  const onGenerateVouchers = async (selectedMonth) => {
+    setMonth(selectedMonth)
+    await page.reload()
+  }
+
   const submitPayment = async (fee, payment, student) => {
     const savedReceipt = await recordFeePayment(fee, payment)
     setReceiptInfo({
@@ -357,9 +416,24 @@ export default function Fees() {
   }
 
   if (page.error) return <ErrorState error={page.error} onRetry={page.reload} />
-  const collected = visibleRows.reduce((total, fee) => total + Number(fee.amount_paid), 0)
+  const visibleFeeIds = new Set(visibleRows.map((fee) => fee.id))
+  const visiblePayments = (data?.payments ?? []).filter((payment) =>
+    payment.paid_on.startsWith(month) && visibleFeeIds.has(payment.fee_id)
+  )
+  const collected = visiblePayments.reduce((total, payment) => total + Number(payment.amount), 0)
   const pending = data?.pending ?? 0
   const defaulterCount = new Set((data?.defaulters ?? []).map((fee) => fee.student_id)).size
+  const filteredPayments = (data?.payments ?? []).filter((payment) => {
+    const term = search.trim().toLowerCase()
+    return payment.paid_on.startsWith(month)
+      && (!term || [
+        payment.student?.name,
+        payment.student?.roll_no,
+        payment.student?.admission_no,
+        payment.receipt_no,
+        payment.title,
+      ].some((value) => String(value ?? '').toLowerCase().includes(term)))
+  })
 
   return (
     <div className="space-y-5">
@@ -382,11 +456,18 @@ export default function Fees() {
             <StatCard icon={Users} label="Defaulter accounts" value={defaulterCount} hint="Unique students past due with a balance" accent="from-rose-500 to-rose-300" />
           </div>
 
+          <div className="flex gap-6 border-b border-ink/10">
+            <button type="button" onClick={() => setActiveTab('ledger')} className={`border-b-2 pb-3 text-sm font-semibold ${activeTab === 'ledger' ? 'border-lilac-600 text-night-900' : 'border-transparent text-ink/55 hover:text-ink'}`}>Fee invoices & ledger</button>
+            <button type="button" onClick={() => setActiveTab('transactions')} className={`border-b-2 pb-3 text-sm font-semibold ${activeTab === 'transactions' ? 'border-lilac-600 text-night-900' : 'border-transparent text-ink/55 hover:text-ink'}`}>Transaction history ({filteredPayments.length})</button>
+          </div>
+
+          {activeTab === 'ledger' ? (
           <GlassCard className="p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 p-5 sm:p-6">
               <SectionHeader title="Student fee ledger" description={`Search, filter, and manage ${monthLabel(month)} fee records.`} />
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => setVoucherOpen(true)} className={BUTTON}><Plus className="h-4 w-4" />Issue voucher</button>
+                <button type="button" onClick={() => setBulkVoucherOpen(true)} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-ink/10 bg-white px-4 text-sm font-medium hover:bg-lilac-50">Generate monthly vouchers</button>
                 <button type="button" onClick={() => setClassSettingsOpen(true)} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-ink/10 bg-white px-4 text-sm font-medium hover:bg-lilac-50">Set Class Fees</button>
               </div>
             </div>
@@ -439,10 +520,44 @@ export default function Fees() {
               </table>
             </div>
           </GlassCard>
+          ) : (
+            <GlassCard className="overflow-hidden">
+              <div className="flex flex-wrap items-end justify-between gap-4 p-5 sm:p-6">
+                <SectionHeader title="Transaction receipt history" description={`Payments recorded in ${monthLabel(month)}.`} />
+                <label className="block min-w-56 text-sm font-medium">Search transactions
+                  <span className="relative mt-1.5 block">
+                    <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
+                    <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Student or receipt number" className={`${FIELD} pl-10`} />
+                  </span>
+                </label>
+              </div>
+              <div className="overflow-x-auto border-t border-white/70">
+                <table className="w-full min-w-[950px] text-left text-sm">
+                  <thead className="bg-white/40 text-xs text-ink/55"><tr>{['Receipt no.', 'Student', 'Invoice', 'Amount received', 'Discount', 'Late fine', 'Mode', 'Date'].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead>
+                  <tbody className="divide-y divide-white/70">
+                    {filteredPayments.map((payment) => (
+                      <tr key={payment.id} className="hover:bg-white/45">
+                        <td className="px-4 py-3.5 font-mono text-xs font-semibold">{payment.receipt_no}</td>
+                        <td className="px-4 py-3.5 font-medium">{payment.student?.name ?? 'Unknown student'}<p className="mt-0.5 text-xs text-ink/45">Roll {payment.student?.roll_no ?? '–'} · Adm {payment.student?.admission_no ?? '–'}</p></td>
+                        <td className="px-4 py-3.5">{payment.title}</td>
+                        <td className="px-4 py-3.5 font-semibold text-emerald-700">{pkr(payment.amount)}</td>
+                        <td className="px-4 py-3.5">{pkr(payment.discount)}</td>
+                        <td className="px-4 py-3.5">{pkr(payment.late_fine)}</td>
+                        <td className="px-4 py-3.5">{payment.payment_mode}</td>
+                        <td className="px-4 py-3.5">{formatDate(payment.paid_on)}</td>
+                      </tr>
+                    ))}
+                    {!filteredPayments.length && <tr><td colSpan="8" className="px-5 py-10 text-center text-ink/50">No payment transactions found for this month.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </GlassCard>
+          )}
         </>
       )}
       {classSettingsOpen && data && <ClassFeeSettings classes={data.classes} onSave={onSaveClassFee} onClose={() => setClassSettingsOpen(false)} />}
       {voucherOpen && data && <IssueVoucherDialog students={data.students} onSave={page.reload} onClose={() => setVoucherOpen(false)} />}
+      {bulkVoucherOpen && data && <BulkVoucherDialog classes={data.classes} onSave={onGenerateVouchers} onClose={() => setBulkVoucherOpen(false)} />}
       {selectedPaymentFee && selectedPaymentStudent && <PaymentDialog fee={selectedPaymentFee} student={selectedPaymentStudent} onSave={submitPayment} onClose={() => setPaymentFeeId('')} />}
       {selectedHistoryStudent && <StudentHistoryDialog student={selectedHistoryStudent} onClose={() => setHistoryStudentId('')} />}
       {receiptInfo && <ReceiptDialog receipt={receiptInfo.receipt} student={receiptInfo.student} schoolName={data?.schoolName ?? 'School'} month={receiptInfo.month} onClose={() => setReceiptInfo(null)} />}

@@ -441,6 +441,8 @@ export async function fetchFeesPage(month) {
           .in('fee_id', historyFees.map((fee) => fee.id))
       : { data: [], error: null }
   )
+  const historyFeeById = Object.fromEntries(historyFees.map((fee) => [fee.id, fee]))
+  const studentById = Object.fromEntries(students.map((student) => [student.id, student]))
   const paymentsByFee = {}
   allPayments.forEach((payment) => {
     const payments = paymentsByFee[payment.fee_id] ?? []
@@ -485,15 +487,35 @@ export async function fetchFeesPage(month) {
   }))
   const activeInvoices = historyFees.map((fee) => ({ ...fee, balance: balanceOf(fee) }))
   const defaulters = activeInvoices.filter((fee) => fee.due_date < currentDate && fee.balance > 0)
+  const paymentRecords = allPayments.map((payment) => {
+    const fee = historyFeeById[payment.fee_id]
+    return {
+      ...payment,
+      student: studentById[fee?.student_id] ?? null,
+      title: fee?.title ?? 'Fee payment',
+      fee_month: fee?.fee_month ?? fee?.due_date ?? null,
+    }
+  })
 
   return {
     classes,
     students: students.map((student) => ({ ...student, history: histories[student.id] ?? [] })),
     fees: feeRecords,
+    payments: paymentRecords.sort((a, b) => b.paid_on.localeCompare(a.paid_on)),
     schoolName: setting?.school_name || 'School',
     pending: activeInvoices.reduce((total, fee) => total + fee.balance, 0),
     defaulters,
   }
+}
+
+export async function generateMonthlyFeeVouchers(month, classId = null) {
+  if (!/^\d{4}-\d{2}$/.test(month)) throw new Error('Select a valid fee month.')
+  const { data, error } = await supabase.rpc('generate_monthly_fee_vouchers', {
+    p_month: `${month}-01`,
+    p_class_id: classId || null,
+  })
+  if (error) throw new Error(error.message)
+  return data
 }
 
 export async function issueFeeVoucher({ studentId, title, amount, dueDate }) {
