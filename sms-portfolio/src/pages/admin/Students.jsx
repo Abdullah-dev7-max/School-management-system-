@@ -179,8 +179,6 @@ export default function Students() {
 
   const students = studentsQuery.data?.students ?? []
   const classes = studentsQuery.data?.classes ?? []
-  if (studentsQuery.loading || !studentsQuery.data) return <LoadingScreen label="Loading students" />
-
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase()
     return students.filter((student) => {
@@ -197,6 +195,9 @@ export default function Students() {
       ].some((value) => String(value ?? '').toLowerCase().includes(normalized))
     })
   }, [students, query, classFilter])
+
+  if (studentsQuery.error) return <ErrorState error={studentsQuery.error} onRetry={studentsQuery.reload} />
+  if (studentsQuery.loading || !studentsQuery.data) return <LoadingScreen label="Loading students" />
 
   const openAdd = () => {
     setEditing(null)
@@ -271,8 +272,7 @@ export default function Students() {
         </div>
       )}
 
-      {studentsQuery.error ? <ErrorState error={studentsQuery.error} onRetry={studentsQuery.reload} /> : (
-        <GlassCard className="overflow-hidden">
+      <GlassCard className="overflow-hidden">
           <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:p-5">
             <label className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-ink/10 bg-white px-3 text-ink/50 focus-within:ring-2 focus-within:ring-lilac-500/60">
               <Search className="h-4 w-4 shrink-0" />
@@ -357,8 +357,7 @@ export default function Students() {
               </table>
             </div>
           )}
-        </GlassCard>
-      )}
+      </GlassCard>
 
       {dialogOpen && (
         <StudentDialog
