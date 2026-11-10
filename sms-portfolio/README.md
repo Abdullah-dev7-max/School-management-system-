@@ -65,11 +65,15 @@ allowlist so password recovery returns to the password update form.
 
 For an existing database, back it up first, confirm that the first five schema
 scripts have been applied, and then run `database/multirole_auth_migration.sql`.
+Run `database/remove_parent_portal_migration.sql` afterward to prevent new
+parent login profiles while preserving any existing guardian links.
+Run `database/credential_access_migration.sql` to prevent anonymous access to
+user, teacher, and student credential records.
 The migrations replace broad anonymous access with authenticated, role-limited
 policies. The login profile migration links an existing institute profile to a
 Supabase Auth account when their email matches and Supabase confirms the email.
 
-### Staff, student, and parent accounts
+### Staff and student accounts
 
 From the Admin dashboard's **Quick actions** or the Students and Teachers
 management pages, add student and teacher records directly to the database.
@@ -88,10 +92,15 @@ credential-storage risk is explicitly accepted.
 For accounts created before this migration, set an initial password from the
 teacher/student management form before the user signs in.
 
-The parent dashboard shows only students explicitly linked through
-`students.parent_id`. Teacher/student dashboard requests are scoped by the
-server-verified role session. The parent portal remains read-only and RLS
-limits it to linked children.
+Teacher/student dashboard requests are scoped by the server-verified role
+session. Parent login and dashboard access are disabled; `students.parent_id` guardian
+links are retained for directory/contact data.
+To populate a linked test school with 10 teachers, 10 demo classes, and 100
+students, run `database/demo_school_seed.sql` in the Supabase SQL Editor. The
+seed is idempotent and uses fictional `.test` email addresses and unique
+generated passwords. Retrieve the passwords from the `teachers.password` and
+`students.password` columns and store/share them securely before using the demo
+accounts.
 
 If `database/accountant_rbac_migration.sql` was previously applied to an
 existing database, run `database/remove_accountant_role_migration.sql` to

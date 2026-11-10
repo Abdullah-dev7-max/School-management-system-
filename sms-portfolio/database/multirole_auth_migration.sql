@@ -1,4 +1,4 @@
--- Enable manually provisioned teacher, student, and parent Auth accounts.
+-- Enable manually provisioned teacher and student Auth accounts.
 -- Run after production_security_migration.sql. Safe to re-run.
 
 create or replace function public.create_initial_admin_profile()
@@ -128,10 +128,6 @@ as $$
     or (public.current_app_role() = 'student' and exists (
       select 1 from public.students s
       where s.user_id = public.current_profile_id() and s.class_id = c.id
-    ))
-    or (public.current_app_role() = 'parent' and exists (
-      select 1 from public.students s
-      where s.parent_id = public.current_profile_id() and s.class_id = c.id
     ));
 $$;
 
@@ -147,7 +143,6 @@ as $$
     where s.id = target_student_id
       and (
         (public.current_app_role() = 'student' and s.user_id = public.current_profile_id())
-        or (public.current_app_role() = 'parent' and s.parent_id = public.current_profile_id())
         or (public.current_app_role() = 'teacher' and s.class_id = any(public.current_role_class_ids()))
       )
   );
@@ -162,14 +157,6 @@ set search_path = ''
 as $$
   select target_user_id = public.current_profile_id()
     or public.is_admin()
-    or (
-      public.current_app_role() = 'parent'
-      and exists (
-        select 1 from public.students s
-        where s.user_id = target_user_id
-          and s.parent_id = public.current_profile_id()
-      )
-    )
     or (
       public.current_app_role() = 'teacher'
       and exists (
@@ -230,7 +217,7 @@ begin
       execute 'create policy role_classes_select on public.classes for select to authenticated using (id = any(public.current_role_class_ids()))';
     elsif table_name = 'students' then
       execute 'create policy admin_all on public.students for all to authenticated using (public.is_admin()) with check (public.is_admin())';
-      execute 'create policy related_students_select on public.students for select to authenticated using (user_id = public.current_profile_id() or parent_id = public.current_profile_id() or (public.current_app_role() = ''teacher'' and class_id = any(public.current_role_class_ids())))';
+      execute 'create policy related_students_select on public.students for select to authenticated using (user_id = public.current_profile_id() or (public.current_app_role() = ''teacher'' and class_id = any(public.current_role_class_ids())))';
     elsif table_name in ('attendance', 'fees', 'marks') then
       execute format('create policy admin_all on public.%I for all to authenticated using (public.is_admin()) with check (public.is_admin())', table_name);
       execute format('create policy related_records_select on public.%I for select to authenticated using (public.can_read_student_record(student_id))', table_name);

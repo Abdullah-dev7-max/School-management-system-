@@ -604,7 +604,7 @@ Deno.serve(async (request) => {
 
     const { data: students, error: studentsError } = await admin
       .from('students')
-      .select('id, user_id, parent_id, class_id, admission_no, roll_no, status, student:users!user_id(full_name), classes(id, name, section, academic_year)')
+      .select('id, user_id, class_id, admission_no, roll_no, status, student:users!user_id(full_name), classes(id, name, section, academic_year)')
       .eq('user_id', profile.id)
       .order('admission_no')
     if (studentsError) throw studentsError

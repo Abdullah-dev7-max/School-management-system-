@@ -3,7 +3,6 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import Layout from './components/layout/Layout.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Login from './pages/Login.jsx'
-import RoleDashboard from './pages/RoleDashboard.jsx'
 import StudentDashboard from './pages/StudentDashboard.jsx'
 import TeacherDashboard from './pages/TeacherDashboard.jsx'
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx'
@@ -26,7 +25,6 @@ const roleHome = {
   admin: '/admin',
   teacher: '/teacher-dashboard',
   student: '/student-dashboard',
-  parent: '/parent',
 }
 
 function RequireRole({ role, children }) {
@@ -103,9 +101,6 @@ export default function App() {
         {['fees', 'marks', 'attendance', 'timetable', 'announcements', 'notes'].map((section) => (
           <Route key={section} path={section} element={<StudentDashboard />} />
         ))}
-      </Route>
-      <Route path="parent" element={<RequireRole role="parent"><Layout /></RequireRole>}>
-        <Route index element={<RoleDashboard />} />
       </Route>
       {['teacher', 'student'].map((role) => (
         <Route key={`${role}-dashboard`} path={`${role}-dashboard`} element={<RequireRole role={role}><Layout /></RequireRole>}>

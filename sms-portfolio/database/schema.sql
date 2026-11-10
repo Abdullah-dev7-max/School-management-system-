@@ -8,7 +8,7 @@
 create extension if not exists "pgcrypto";
 
 -- ---------- 1. Enums ----------
-do $$ begin create type user_role as enum ('admin', 'teacher', 'student', 'parent');
+do $$ begin create type user_role as enum ('admin', 'teacher', 'student');
 exception when duplicate_object then null; end $$;
 do $$ begin create type attendance_status as enum ('present', 'absent', 'late', 'excused');
 exception when duplicate_object then null; end $$;
@@ -57,7 +57,7 @@ create table if not exists students (
   id             uuid primary key default gen_random_uuid(),
   user_id        uuid        not null unique references users(id) on delete cascade,
   class_id       uuid        references classes(id) on delete set null,
-  parent_id      uuid        references users(id)   on delete set null,  -- a user with role 'parent'
+  parent_id      uuid        references users(id)   on delete set null,  -- legacy guardian profile link; not a login role
   admission_no   text        not null unique,
   roll_no        int,
   status         text        not null default 'active' check (status in ('active', 'inactive', 'withdrawn')),

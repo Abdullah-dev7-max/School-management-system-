@@ -67,14 +67,6 @@ export const ROLES = {
       { to: '/student-dashboard/notes', label: 'Notes', icon: FileText },
     ],
   },
-  parent: {
-    id: 'parent',
-    label: 'Parent',
-    description: 'View linked student records',
-    icon: Users,
-    accent: 'from-fuchsia-500 to-pink-400',
-    nav: [{ to: '/parent', label: 'Dashboard', icon: LayoutDashboard }],
-  },
 }
 
 export function getGreeting(date = new Date()) {

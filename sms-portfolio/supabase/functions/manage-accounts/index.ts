@@ -20,10 +20,6 @@ type AccountInput = {
   status?: string
   employeeCode?: string
   subject?: string
-  parentName?: string
-  parentEmail?: string
-  parentPhone?: string
-  parentPassword?: string
 }
 
 function response(body: unknown, status = 200) {
@@ -80,15 +76,6 @@ Deno.serve(async (request) => {
           throw new Error('Roll number must be a positive whole number.')
         }
 
-        const parentFields = [input.parentName, input.parentEmail, input.parentPassword]
-        if (parentFields.some((value) => Boolean(value?.trim?.()))) {
-          requiredText(input.parentName, 'Parent name')
-          requiredText(input.parentEmail, 'Parent email')
-          validatePassword(input.parentPassword, 'Parent initial password')
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.parentEmail.trim())) {
-            throw new Error('Enter a valid parent email address.')
-          }
-        }
       } else {
         requiredText(input.employeeCode, 'Employee code')
         requiredText(input.subject, 'Subject')
@@ -147,7 +134,7 @@ Deno.serve(async (request) => {
   const createdAuthIds: string[] = []
   const createdProfileIds: string[] = []
   try {
-    const createAuthProfile = async (name: string, email: string, password: string, role: 'student' | 'teacher' | 'parent', phone?: string) => {
+    const createAuthProfile = async (name: string, email: string, password: string, role: 'student' | 'teacher', phone?: string) => {
       const { data: profile, error: profileError } = await adminClient
         .from('users')
         .insert({
@@ -181,24 +168,12 @@ Deno.serve(async (request) => {
     )
 
     if (input.action === 'create_student') {
-      let parentProfileId: string | null = null
-      if (input.parentName?.trim() && input.parentEmail?.trim() && input.parentPassword) {
-        const parent = await createAuthProfile(
-          input.parentName,
-          input.parentEmail,
-          input.parentPassword,
-          'parent',
-          input.parentPhone
-        )
-        parentProfileId = parent.profileId
-      }
       const { error: studentError } = await adminClient.from('students').insert({
         user_id: primary.profileId,
         admission_no: input.admissionNo.trim(),
         class_id: input.classId || null,
         roll_no: input.rollNo === '' || input.rollNo == null ? null : Number(input.rollNo),
         status: input.status === 'inactive' || input.status === 'withdrawn' ? input.status : 'active',
-        parent_id: parentProfileId,
       })
       if (studentError) throw studentError
     } else {

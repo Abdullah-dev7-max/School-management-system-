@@ -68,32 +68,6 @@ export async function fetchRoleDashboard(profile, sessionToken) {
   if (profile.role === 'teacher' || profile.role === 'student') {
     return invokeRoleAuth({ action: 'dashboard', token: sessionToken })
   }
-
-  if (profile.role === 'parent') {
-    const students = unwrap(
-      await supabase
-        .from('students')
-        .select('id, user_id, parent_id, admission_no, roll_no, status, student:users!user_id(full_name), classes(id, name, section, academic_year)')
-        .eq('parent_id', profile.id)
-        .order('admission_no')
-    )
-    const studentIds = students.map((student) => student.id)
-    const [fees, attendance, marks] = studentIds.length
-      ? await Promise.all([
-          supabase.from('fees').select('id, student_id, title, amount, amount_paid, due_date, status').in('student_id', studentIds).order('due_date', { ascending: false }),
-          supabase.from('attendance').select('student_id, attended_on, status').in('student_id', studentIds).order('attended_on', { ascending: false }).limit(30),
-          supabase.from('marks').select('student_id, subject, exam, score, max_score, exam_date').in('student_id', studentIds).order('exam_date', { ascending: false }).limit(30),
-        ])
-      : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }]
-    return {
-      role: profile.role,
-      students,
-      fees: unwrap(fees),
-      attendance: unwrap(attendance),
-      marks: unwrap(marks),
-    }
-  }
-
   throw new Error('This account role does not have a dashboard.')
 }
 
