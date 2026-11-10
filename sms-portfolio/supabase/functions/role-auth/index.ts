@@ -2,9 +2,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-api-version',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Content-Type': 'application/json',
+  'Access-Control-Max-Age': '86400',
+  Vary: 'Origin, Access-Control-Request-Headers, Access-Control-Request-Method',
 }
 const SESSION_LIFETIME_MS = 12 * 60 * 60 * 1000
 
@@ -21,7 +22,10 @@ type Input = {
 }
 
 function response(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: corsHeaders })
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
 }
 
 function encodeBase64(value: Uint8Array) {
@@ -39,7 +43,7 @@ async function createSessionToken() {
 }
 
 Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders })
   if (request.method !== 'POST') return response({ error: 'Method not allowed.' }, 405)
 
   const url = Deno.env.get('SUPABASE_URL')

@@ -1,7 +1,10 @@
 import { supabase } from './supabaseClient.js'
 
 export async function invokeRoleAuth(body) {
-  const { data, error } = await supabase.functions.invoke('role-auth', { body })
+  const { data, error } = await supabase.functions.invoke('role-auth', {
+    body,
+    headers: { 'Content-Type': 'application/json' },
+  })
   if (error) {
     let message = error.message
     let status
