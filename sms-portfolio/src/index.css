@@ -51,60 +51,39 @@
   }
 }
 
-.scholara-loader {
-  background:
-    radial-gradient(75% 65% at 50% 30%, rgba(118, 72, 224, 0.2), transparent 70%),
-    linear-gradient(145deg, #0a0716, #100c22 55%, #171230);
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: rgba(118, 72, 224, 0.09);
+  isolation: isolate;
 }
 
-.scholara-loader-glow {
-  position: absolute;
-  width: 18rem;
-  height: 18rem;
-  border-radius: 9999px;
-  filter: blur(80px);
-  opacity: 0.2;
-  pointer-events: none;
+.skeleton-shimmer-dark {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.scholara-loader-glow-one {
-  top: 10%;
-  left: 15%;
-  background: #8f68f5;
-}
-
-.scholara-loader-glow-two {
-  right: 12%;
-  bottom: 8%;
-  background: #38bdf8;
-}
-
-.scholara-loader-orbit {
+.skeleton-shimmer::after {
   position: absolute;
   inset: 0;
-  border: 1px solid rgba(199, 181, 255, 0.18);
-  border-top-color: #c7b5ff;
-  border-right-color: rgba(125, 211, 252, 0.7);
-  border-radius: 1.8rem;
-  animation: scholara-loader-spin 1.8s linear infinite;
+  z-index: 1;
+  background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.78) 50%, transparent 80%);
+  content: '';
+  transform: translateX(-100%);
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
 }
 
-.scholara-loader-progress span {
-  animation: scholara-loader-progress 1.4s ease-in-out infinite;
+.skeleton-shimmer-dark::after {
+  background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.2) 50%, transparent 80%);
 }
 
-@keyframes scholara-loader-spin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes scholara-loader-progress {
-  0% { transform: translateX(-120%); }
-  100% { transform: translateX(250%); }
+@keyframes skeleton-shimmer {
+  to { transform: translateX(100%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scholara-loader-orbit,
-  .scholara-loader-progress span {
+  .skeleton-shimmer::after {
     animation: none;
+    transform: translateX(0);
+    opacity: 0.35;
   }
 }
