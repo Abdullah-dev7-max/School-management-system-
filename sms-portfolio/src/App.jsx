@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard.jsx'
 import Login from './pages/Login.jsx'
 import StudentDashboard from './pages/StudentDashboard.jsx'
 import TeacherDashboard from './pages/TeacherDashboard.jsx'
+import TeacherSchedule from './pages/TeacherSchedule.jsx'
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx'
 import Students from './pages/admin/Students.jsx'
 import Teachers from './pages/Teachers.jsx'
@@ -92,6 +93,7 @@ export default function App() {
       </Route>
       <Route path="teacher" element={<RequireRole role="teacher"><Layout /></RequireRole>}>
         <Route index element={<TeacherDashboard />} />
+        <Route path="timetable" element={<TeacherSchedule />} />
         <Route path="attendance" element={<Attendance />} />
         <Route path="marks" element={<Marks />} />
         <Route path="notes" element={<TeacherNotes />} />
@@ -110,6 +112,7 @@ export default function App() {
             <>
               <Route path="attendance" element={<Attendance />} />
               <Route path="marks" element={<Marks />} />
+              <Route path="timetable" element={<TeacherSchedule />} />
               <Route path="notes" element={<TeacherNotes />} />
               <Route path="announcements" element={<TeacherAnnouncements />} />
             </>

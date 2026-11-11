@@ -181,6 +181,25 @@ function PageContent({ variant }) {
   if (variant === 'timetable') {
     return <div className="space-y-5"><PageHeading action />{Array.from({ length: 3 }, (_, index) => <ListPanel key={index} rows={3} />)}</div>
   }
+  if (variant === 'teacher-schedule') {
+    return (
+      <div className="space-y-5">
+        <PageHeading />
+        <ListPanel rows={3} />
+        <Panel>
+          <div className="flex gap-2 overflow-hidden">{Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-10 w-24 shrink-0 rounded-xl" />)}</div>
+          <div className="mt-4 divide-y divide-ink/5">
+            {Array.from({ length: 4 }, (_, index) => (
+              <div key={index} className="flex items-center justify-between gap-4 py-4">
+                <div><Skeleton className="h-4 w-36" /><Skeleton className="mt-2 h-3 w-24" /></div>
+                <Skeleton className="h-8 w-28 rounded-lg" />
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </div>
+    )
+  }
   if (variant === 'attendance-overview') {
     return (
       <div className="space-y-5">
@@ -267,6 +286,7 @@ function getVariant(pathname) {
     const section = path.split('/').at(-1)
     if (section === 'attendance') return 'attendance-register'
     if (section === 'marks') return 'marks'
+    if (section === 'timetable') return 'teacher-schedule'
     if (section === 'notes') return 'notes'
     if (section === 'announcements') return 'announcements'
   }

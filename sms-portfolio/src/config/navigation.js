@@ -47,6 +47,7 @@ export const ROLES = {
       { to: '/teacher', label: 'Dashboard', icon: LayoutDashboard },
       { to: '/teacher-dashboard/attendance', label: 'Attendance', icon: ClipboardList },
       { to: '/teacher-dashboard/marks', label: 'Exam marks', icon: Award },
+      { to: '/teacher-dashboard/timetable', label: 'Schedule', icon: Clock3 },
       { to: '/teacher-dashboard/notes', label: 'Class notes', icon: FileText },
       { to: '/teacher-dashboard/announcements', label: 'Announcements', icon: Megaphone },
     ],
