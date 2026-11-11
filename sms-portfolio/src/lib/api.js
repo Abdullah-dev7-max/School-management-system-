@@ -58,14 +58,13 @@ export async function fetchAdminOverview() {
 }
 
 export async function fetchInstituteSettings() {
-  const { data, error } = await supabase
+  const { data: rows, error: settingsError } = await supabase
     .from('institute_settings')
     .select('*')
     .limit(1)
-    .maybeSingle()
 
-  if (error) throw error
-  return data ?? {
+  if (settingsError) throw settingsError
+  return rows?.[0] ?? {
     school_name: '',
     address: null,
     contact_email: '',
@@ -283,12 +282,12 @@ export async function fetchClassesPage() {
       .order('section'),
     supabase.from('students').select('class_id'),
     supabase.from('teachers').select('id, user_id, teacher:users!user_id(full_name)'),
-    supabase.from('institute_settings').select('academic_year').limit(1).maybeSingle(),
+    supabase.from('institute_settings').select('academic_year').limit(1),
   ])
   const classes = unwrap(classResult)
   const studentRows = unwrap(studentResult)
   const teachers = unwrap(teacherResult)
-  const settings = unwrap(settingsResult)
+  const settings = unwrap(settingsResult)?.[0]
   const teacherById = Object.fromEntries(teachers.map((teacher) => [teacher.id, teacher]))
   const studentCounts = studentRows.reduce((counts, student) => {
     if (student.class_id) counts[student.class_id] = (counts[student.class_id] ?? 0) + 1
