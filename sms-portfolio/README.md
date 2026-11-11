@@ -42,6 +42,7 @@ In Supabase **SQL Editor**, run these scripts in order:
 18. `database/admin_signup_recovery_migration.sql`
 19. `database/open_initial_admin_signup_migration.sql`
 20. `database/admin_approval_migration.sql`
+21. `database/admin_single_active_migration.sql`
 
 These scripts are safe to rerun and do not reset existing tables. The
 production security migration removes only the former application's known
@@ -56,6 +57,11 @@ handled by Supabase Auth and are never written to `public.users` in plaintext.
 Each request creates an unapproved Admin profile. Confirm the email, then a
 developer must approve that specific profile in Supabase SQL Editor before it
 can access the Admin dashboard. Only one Admin can be approved at a time.
+Once an Admin is approved, new Admin requests are closed. To allow another
+person to request access, remove the active Admin profile from `public.users`
+or revoke its approval in SQL Editor. The Auth account itself is separate; if
+you want to reuse that same email for a new signup, also delete the old Auth
+user from **Authentication → Users**.
 
 Approve a confirmed request by replacing the example email and running:
 

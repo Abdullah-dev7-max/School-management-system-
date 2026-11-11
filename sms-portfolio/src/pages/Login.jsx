@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, GraduationCap, LoaderCircle, LockKeyhole, Mail, X } from 'lucide-react'
 import { ROLES } from '../config/navigation.js'
@@ -70,9 +70,28 @@ export default function Login() {
   const [registering, setRegistering] = useState(false)
   const [username, setUsername] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [adminSignupAvailable, setAdminSignupAvailable] = useState(null)
   const [resetOpen, setResetOpen] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    let active = true
+    supabase.rpc('admin_signup_open').then(({ data, error: statusError }) => {
+      if (!active) return
+      if (statusError) {
+        setAdminSignupAvailable(null)
+        setError(`Could not check Admin request availability: ${statusError.message}`)
+        return
+      }
+      setAdminSignupAvailable(data === true)
+    }).catch((statusError) => {
+      if (!active) return
+      setAdminSignupAvailable(null)
+      setError(`Could not check Admin request availability: ${statusError.message || 'Network error'}`)
+    })
+    return () => { active = false }
+  }, [])
 
   const submit = async (event) => {
     event.preventDefault()
@@ -87,6 +106,12 @@ export default function Login() {
         if (password.length < 12) throw new Error('Use a password with at least 12 characters.')
         if (password !== confirmPassword) throw new Error('The passwords do not match.')
         if (!username.trim()) throw new Error('Enter a username for the Admin account.')
+        const { data: requestOpen, error: statusError } = await supabase.rpc('admin_signup_open')
+        if (statusError) throw statusError
+        if (requestOpen !== true) {
+          setAdminSignupAvailable(false)
+          throw new Error('An Admin already has access. New Admin requests are closed.')
+        }
         const { data: signupData, error: signupError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
@@ -208,15 +233,15 @@ export default function Login() {
           </button>
         </form>
 
-        {role === 'admin' && !registering && (
+        {role === 'admin' && !registering && adminSignupAvailable === true && (
           <button type="button" onClick={() => { setRegistering(true); setError(''); setMessage('') }} className="mt-5 w-full text-center text-sm font-medium text-lilac-700 hover:underline">
             Create an Admin account
           </button>
         )}
-        {role === 'admin' && !registering && (
+        {role === 'admin' && !registering && adminSignupAvailable === false && (
           <div className="mt-5 space-y-3">
             <p className="text-center text-xs text-ink/55">
-              New Admin accounts require email confirmation and developer approval before dashboard access.
+              An Admin currently has access. New Admin requests are closed until that account is removed or approval is revoked.
             </p>
           </div>
         )}
