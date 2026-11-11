@@ -43,6 +43,7 @@ In Supabase **SQL Editor**, run these scripts in order:
 19. `database/open_initial_admin_signup_migration.sql`
 20. `database/admin_approval_migration.sql`
 21. `database/admin_single_active_migration.sql`
+22. `database/admin_signup_reopen_after_auth_delete_migration.sql`
 
 These scripts are safe to rerun and do not reset existing tables. The
 production security migration removes only the former application's known
