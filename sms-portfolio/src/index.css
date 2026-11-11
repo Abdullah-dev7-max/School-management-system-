@@ -47,6 +47,165 @@
   }
 }
 
+@media (min-width: 1024px) and (max-height: 640px) {
+  .login-page {
+    padding-block: 0.75rem;
+  }
+
+  .login-brand-panel,
+  .login-form-panel {
+    padding-block: 0.75rem;
+  }
+
+  .login-brand-copy {
+    padding-block: 0.5rem;
+  }
+
+  .login-brand-copy h2 {
+    margin-top: 0.75rem;
+    font-size: 2rem;
+  }
+
+  .login-brand-description {
+    margin-top: 0.5rem;
+  }
+
+  .login-brand-benefits,
+  .login-privacy {
+    display: none;
+  }
+
+  .login-form-header {
+    margin-bottom: 0.625rem;
+  }
+
+  .login-form-header > :first-child {
+    margin-bottom: 0.5rem;
+  }
+
+  .login-form-header > :last-child {
+    margin-top: 0.25rem;
+    line-height: 1.4;
+  }
+
+  .login-role-select {
+    margin-bottom: 0.625rem;
+  }
+
+  .login-role-select [role='tab'] {
+    height: 2.25rem;
+  }
+
+  .login-credentials > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.5rem;
+  }
+
+  .login-credentials input {
+    height: 2.5rem;
+  }
+
+  .login-credentials input[type='checkbox'] {
+    height: 1rem;
+  }
+
+  .login-credentials button[type='submit'] {
+    height: 2.5rem;
+  }
+
+  .login-admin-note {
+    margin-top: 0.5rem;
+    line-height: 1.35;
+  }
+}
+
+@media (max-width: 639px) {
+  .login-brand-panel {
+    min-height: 0;
+    padding-block: 0.875rem;
+  }
+
+  .login-brand-copy {
+    margin-block: 0.75rem;
+  }
+
+  .login-brand-copy h2 {
+    margin-top: 0.5rem;
+    font-size: 1.625rem;
+  }
+
+  .login-form-panel {
+    padding-block: 1rem;
+  }
+
+  .login-form-header,
+  .login-role-select {
+    margin-bottom: 0.75rem;
+  }
+
+  .login-role-select [role='tab'] {
+    height: 2.5rem;
+  }
+
+  .login-credentials > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.75rem;
+  }
+
+  .login-credentials input:not([type='checkbox']) {
+    height: 2.75rem;
+  }
+
+  .login-credentials button[type='submit'] {
+    height: 2.75rem;
+  }
+
+  .login-admin-note {
+    margin-top: 0.75rem;
+    line-height: 1.4;
+  }
+
+  .login-privacy {
+    display: none;
+  }
+}
+
+@media (max-width: 639px) and (max-height: 760px) {
+  .login-brand-panel,
+  .login-form-panel {
+    padding-block: 0.625rem;
+  }
+
+  .login-brand-copy {
+    margin-block: 0.5rem;
+  }
+
+  .login-brand-copy > span:first-child,
+  .login-form-header > :last-child {
+    display: none;
+  }
+
+  .login-brand-copy h2 {
+    margin-top: 0;
+    font-size: 1.375rem;
+  }
+
+  .login-role-select [role='tab'] {
+    height: 2rem;
+  }
+
+  .login-credentials > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.5rem;
+  }
+
+  .login-credentials input:not([type='checkbox']),
+  .login-credentials button[type='submit'] {
+    height: 2.5rem;
+  }
+
+  .login-admin-note {
+    margin-top: 0.5rem;
+  }
+}
+
 .skeleton-shimmer {
   position: relative;
   overflow: hidden;

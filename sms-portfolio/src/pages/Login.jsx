@@ -164,11 +164,11 @@ export default function Login() {
   }
 
   return (
-    <main className="relative grid min-h-screen place-items-center overflow-hidden bg-[#f2f7f4] p-3 sm:p-6">
+    <main className="login-page relative grid min-h-[100svh] place-items-center overflow-x-clip bg-[#f2f7f4] p-3 sm:p-5 lg:p-6">
       <div aria-hidden="true" className="pointer-events-none absolute -left-32 top-0 h-96 w-96 rounded-full bg-lilac-200/50 blur-3xl" />
       <div aria-hidden="true" className="pointer-events-none absolute -bottom-40 -right-20 h-[30rem] w-[30rem] rounded-full bg-emerald-100/70 blur-3xl" />
-      <GlassCard className="relative grid w-full max-w-6xl overflow-hidden rounded-[2rem] border-white/80 bg-white shadow-[0_32px_100px_-42px_rgba(12,37,45,0.38)] lg:min-h-[690px] lg:grid-cols-[0.92fr_1.08fr]">
-        <aside className="relative isolate flex min-h-[220px] flex-col overflow-hidden bg-night-900 px-5 py-5 text-white sm:min-h-[270px] sm:px-10 sm:py-9 lg:min-h-full lg:px-12 lg:py-11">
+      <GlassCard className="login-card relative grid w-full max-w-6xl overflow-hidden rounded-[2rem] border-white/80 bg-white shadow-[0_32px_100px_-42px_rgba(12,37,45,0.38)] lg:grid-cols-[0.92fr_1.08fr]">
+        <aside className="login-brand-panel relative isolate flex min-h-[220px] flex-col overflow-hidden bg-night-900 px-5 py-5 text-white sm:min-h-[270px] sm:px-10 sm:py-9 lg:min-h-full lg:px-10 lg:py-8 xl:px-12">
           <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_15%_5%,rgba(104,180,157,0.35),transparent_40%),radial-gradient(ellipse_at_95%_95%,rgba(52,143,120,0.25),transparent_45%)]" />
           <div aria-hidden="true" className="absolute -right-28 top-24 -z-10 h-80 w-80 rounded-full border border-white/10" />
           <div aria-hidden="true" className="absolute -right-16 top-36 -z-10 h-56 w-56 rounded-full border border-white/10" />
@@ -183,7 +183,7 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="my-5 max-w-md sm:my-10 lg:my-auto lg:py-12">
+          <div className="login-brand-copy my-5 max-w-md sm:my-10 lg:my-auto lg:py-6 xl:py-8">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3 py-1.5 text-xs font-medium text-lilac-100">
               <Sparkles className="h-3.5 w-3.5" /> A brighter way to run your school
             </span>
@@ -191,11 +191,11 @@ export default function Login() {
               Every school day,
               <span className="mt-1 block text-lilac-200">beautifully in sync.</span>
             </h2>
-            <p className="mt-4 hidden max-w-sm text-sm leading-6 text-white/65 sm:block sm:text-base">
+            <p className="login-brand-description mt-4 hidden max-w-sm text-sm leading-6 text-white/65 sm:block sm:text-base">
               Bring your people, progress, and day-to-day school life together in one thoughtful space.
             </p>
 
-            <div className="mt-7 hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-1">
+            <div className="login-brand-benefits mt-7 hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-1">
               <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-3.5">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-lilac-400/15 text-lilac-200">
                   <BookOpenCheck className="h-5 w-5" />
@@ -219,9 +219,9 @@ export default function Login() {
           <p className="hidden text-xs text-white/40 lg:block">Made for the people who make every school day matter.</p>
         </aside>
 
-        <section className="flex items-center justify-center px-5 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12">
+        <section className="login-form-panel flex items-center justify-center px-5 py-8 sm:px-10 sm:py-10 lg:px-9 lg:py-6 xl:px-12">
           <div className="w-full max-w-md">
-            <div className="mb-7">
+            <div className="login-form-header mb-5 lg:mb-4">
               <p className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-lilac-600">
                 <span className="h-1.5 w-1.5 rounded-full bg-lilac-500" />
                 Secure institute portal
@@ -234,38 +234,38 @@ export default function Login() {
               </p>
             </div>
 
-            <div className="mb-6">
-              <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-ink/45">Continue as</p>
+            <div className="login-role-select mb-5 lg:mb-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink/45">Continue as</p>
               <div className="grid grid-cols-3 gap-2 rounded-2xl bg-[#f3f7f5] p-1.5" role="tablist" aria-label="Account role">
                 {roleOptions.map(({ id, label, icon: Icon }) => (
-                  <button key={id} type="button" role="tab" aria-selected={role === id} onClick={() => { setRole(id); setRegistering(false); setError('') }} className={`inline-flex h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lilac-500 focus-visible:ring-offset-2 ${role === id ? 'bg-white text-night-900 shadow-sm ring-1 ring-black/[0.04]' : 'text-ink/55 hover:bg-white/70 hover:text-ink'}`}>
+                  <button key={id} type="button" role="tab" aria-selected={role === id} onClick={() => { setRole(id); setRegistering(false); setError('') }} className={`inline-flex h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lilac-500 focus-visible:ring-offset-2 lg:h-10 ${role === id ? 'bg-white text-night-900 shadow-sm ring-1 ring-black/[0.04]' : 'text-ink/55 hover:bg-white/70 hover:text-ink'}`}>
                     <Icon className="h-4 w-4" />{label}
                   </button>
                 ))}
               </div>
             </div>
 
-            <form onSubmit={submit} className="space-y-4">
+            <form onSubmit={submit} className="login-credentials space-y-4 lg:space-y-3">
               {registering && (
                 <label className="block text-sm font-medium text-ink">Admin username
-                  <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" maxLength={80} required className="mt-1.5 h-12 w-full rounded-xl border border-ink/10 bg-white px-3.5 text-sm outline-none transition focus:border-lilac-500/60 focus:ring-4 focus:ring-lilac-500/10" />
+                  <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" maxLength={80} required className="mt-1.5 h-12 w-full rounded-xl border border-ink/10 bg-white px-3.5 text-sm outline-none transition focus:border-lilac-500/60 focus:ring-4 focus:ring-lilac-500/10 lg:h-11" />
                 </label>
               )}
               <label className="block text-sm font-medium text-ink">Email address
                 <span className="relative mt-1.5 block">
                   <Mail aria-hidden="true" className="absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink/35" />
-                  <input type="text" inputMode="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} maxLength={255} required className="h-12 w-full rounded-xl border border-ink/10 bg-white pl-11 pr-3.5 text-sm font-normal outline-none transition placeholder:text-ink/35 focus:border-lilac-500/60 focus:ring-4 focus:ring-lilac-500/10" placeholder="you@school.edu" />
+                  <input type="text" inputMode="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} maxLength={255} required className="h-12 w-full rounded-xl border border-ink/10 bg-white pl-11 pr-3.5 text-sm font-normal outline-none transition placeholder:text-ink/35 focus:border-lilac-500/60 focus:ring-4 focus:ring-lilac-500/10 lg:h-11" placeholder="you@school.edu" />
                 </span>
               </label>
               {registering && (
                 <label className="block text-sm font-medium text-ink">Confirm password
-                  <input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={12} required className="mt-1.5 h-12 w-full rounded-xl border border-ink/10 bg-white px-3.5 text-sm outline-none transition focus:border-lilac-500/60 focus:ring-4 focus:ring-lilac-500/10" />
+                  <input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={12} required className="mt-1.5 h-12 w-full rounded-xl border border-ink/10 bg-white px-3.5 text-sm outline-none transition focus:border-lilac-500/60 focus:ring-4 focus:ring-lilac-500/10 lg:h-11" />
                 </label>
               )}
               <label className="block text-sm font-medium text-ink">Password
                 <span className="relative mt-1.5 block">
                   <LockKeyhole aria-hidden="true" className="absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink/35" />
-                  <input type={showPassword ? 'text' : 'password'} autoComplete={registering ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} minLength={registering ? 12 : undefined} required className="h-12 w-full rounded-xl border border-ink/10 bg-white py-2 pl-11 pr-12 text-sm font-normal outline-none transition focus:border-lilac-500/60 focus:ring-4 focus:ring-lilac-500/10" placeholder="Enter your password" />
+                  <input type={showPassword ? 'text' : 'password'} autoComplete={registering ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} minLength={registering ? 12 : undefined} required className="h-12 w-full rounded-xl border border-ink/10 bg-white py-2 pl-11 pr-12 text-sm font-normal outline-none transition focus:border-lilac-500/60 focus:ring-4 focus:ring-lilac-500/10 lg:h-11" placeholder="Enter your password" />
                   <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword((value) => !value)} className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-ink/45 transition hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lilac-500">
                     {showPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
                   </button>
@@ -286,7 +286,7 @@ export default function Login() {
 
               {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
               {message && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}
-              <button type="submit" disabled={busy} className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-night-900 px-4 text-sm font-semibold text-white shadow-lg shadow-night-900/15 transition hover:-translate-y-0.5 hover:bg-night-800 hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-lilac-500/30 disabled:cursor-wait disabled:opacity-60 disabled:hover:translate-y-0">
+              <button type="submit" disabled={busy} className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-night-900 px-4 text-sm font-semibold text-white shadow-lg shadow-night-900/15 transition hover:-translate-y-0.5 hover:bg-night-800 hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-lilac-500/30 disabled:cursor-wait disabled:opacity-60 disabled:hover:translate-y-0 lg:h-11">
                 {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
                 {busy ? 'Please wait…' : registering ? 'Set up administrator account' : `Sign in as ${ROLES[role].label}`}
                 {!busy && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />}
@@ -294,7 +294,7 @@ export default function Login() {
             </form>
 
             {role === 'admin' && !registering && adminSignupAvailable === true && (
-              <p className="mt-5 text-center text-sm text-ink/55">
+              <p className="login-admin-note mt-5 text-center text-sm text-ink/55">
                 New to Scholara?{' '}
                 <button type="button" onClick={() => { setRegistering(true); setError(''); setMessage('') }} className="font-semibold text-lilac-600 hover:text-lilac-700 hover:underline">
                   Create an Admin account
@@ -302,7 +302,7 @@ export default function Login() {
               </p>
             )}
             {role === 'admin' && !registering && adminSignupAvailable === false && (
-              <p className="mt-5 text-center text-xs leading-5 text-ink/50">
+              <p className="login-admin-note mt-5 text-center text-xs leading-5 text-ink/50">
                 Admin requests are temporarily unavailable. Apply the latest Admin review migration in Supabase.
               </p>
             )}
@@ -311,7 +311,7 @@ export default function Login() {
                 Back to sign in
               </button>
             )}
-            <div className="mt-7 flex items-center justify-center gap-2 border-t border-ink/[0.07] pt-5 text-xs text-ink/40">
+            <div className="login-privacy mt-6 flex items-center justify-center gap-2 border-t border-ink/[0.07] pt-4 text-xs text-ink/40">
               <ShieldCheck className="h-4 w-4 text-lilac-600/70" />
               Your school account is protected and private.
             </div>
