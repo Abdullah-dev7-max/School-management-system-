@@ -7,12 +7,12 @@ import SectionHeader from '../components/ui/SectionHeader.jsx'
 import LoadingScreen from '../components/ui/LoadingScreen.jsx'
 import { Field, FORM_BUTTON, FormError, ManagementError, ManagementModal, SelectField } from '../components/admin/ManagementUi.jsx'
 
-function ClassForm({ classItem, teachers, onClose, onSave }) {
+function ClassForm({ classItem, teachers, academicYear, onClose, onSave }) {
   const [form, setForm] = useState({
     name: classItem?.name ?? '',
     section: classItem?.section ?? '',
     room: classItem?.room ?? '',
-    academicYear: classItem?.academic_year ?? `${new Date().getFullYear()}-${String((new Date().getFullYear() + 1) % 100).padStart(2, '0')}`,
+    academicYear: classItem?.academic_year ?? academicYear,
     classTeacherId: classItem?.class_teacher_id ?? '',
   })
   const [saving, setSaving] = useState(false)
@@ -123,7 +123,7 @@ export default function Classes() {
           ))}
         </div>
       )}
-      {dialogOpen && <ClassForm key={editing?.id ?? 'new'} classItem={editing} teachers={classesQuery.data?.teachers ?? []} onClose={() => setDialogOpen(false)} onSave={save} />}
+      {dialogOpen && <ClassForm key={editing?.id ?? 'new'} classItem={editing} teachers={classesQuery.data?.teachers ?? []} academicYear={classesQuery.data.academicYear} onClose={() => setDialogOpen(false)} onSave={save} />}
     </div>
   )
 }
