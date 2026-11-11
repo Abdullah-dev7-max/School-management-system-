@@ -137,30 +137,6 @@ export default function Login() {
     }
   }
 
-  const resendAdminConfirmation = async () => {
-    setError('')
-    setMessage('')
-    if (!email.includes('@')) {
-      setError('Enter the Admin email address to request a confirmation email.')
-      return
-    }
-
-    setBusy(true)
-    try {
-      const { error: resendError } = await supabase.auth.resend({
-        type: 'signup',
-        email: email.trim(),
-        options: { emailRedirectTo: `${window.location.origin}/login` },
-      })
-      if (resendError) throw resendError
-      setMessage('If this Admin account is awaiting confirmation, a new confirmation email will be sent.')
-    } catch (resendError) {
-      setError(resendError.message || 'Could not request a confirmation email.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
   return (
     <main className="relative grid min-h-screen place-items-center overflow-hidden bg-canvas p-4">
       <div aria-hidden="true" className="pointer-events-none absolute -left-20 top-1/4 h-80 w-80 rounded-full bg-lilac-300/40 blur-3xl" />
@@ -242,9 +218,6 @@ export default function Login() {
             <p className="text-center text-xs text-ink/55">
               New Admin accounts require email confirmation and developer approval before dashboard access.
             </p>
-            <button type="button" disabled={busy} onClick={resendAdminConfirmation} className="w-full text-center text-sm font-medium text-lilac-700 hover:underline disabled:opacity-60">
-              Resend Admin confirmation email
-            </button>
           </div>
         )}
         {registering && (
