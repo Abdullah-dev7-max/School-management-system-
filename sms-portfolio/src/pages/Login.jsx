@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, GraduationCap, LoaderCircle, LockKeyhole, Mail, X } from 'lucide-react'
+import { ArrowRight, BookOpenCheck, Eye, EyeOff, GraduationCap, LoaderCircle, LockKeyhole, Mail, ShieldCheck, Sparkles, X } from 'lucide-react'
 import { ROLES } from '../config/navigation.js'
 import { useRole } from '../context/RoleContext.jsx'
 import { supabase, setRememberSession } from '../lib/supabaseClient.js'
@@ -164,93 +164,159 @@ export default function Login() {
   }
 
   return (
-    <main className="relative grid min-h-screen place-items-center overflow-hidden bg-canvas p-4">
-      <div aria-hidden="true" className="pointer-events-none absolute -left-20 top-1/4 h-80 w-80 rounded-full bg-lilac-300/40 blur-3xl" />
-      <div aria-hidden="true" className="pointer-events-none absolute -right-20 bottom-0 h-96 w-96 rounded-full bg-amber-200/35 blur-3xl" />
-      <GlassCard className="relative w-full max-w-lg p-6 sm:p-8">
-        <div className="mb-6 flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-lilac-400 to-lilac-600 text-white shadow-glow">
-            <GraduationCap className="h-6 w-6" />
-          </span>
-          <div>
-            <h1 className="text-xl font-semibold">Welcome to Scholara</h1>
-            <p className="text-sm text-ink/55">Sign in to your institute account</p>
-          </div>
-        </div>
+    <main className="relative grid min-h-screen place-items-center overflow-hidden bg-[#f2f7f4] p-3 sm:p-6">
+      <div aria-hidden="true" className="pointer-events-none absolute -left-32 top-0 h-96 w-96 rounded-full bg-lilac-200/50 blur-3xl" />
+      <div aria-hidden="true" className="pointer-events-none absolute -bottom-40 -right-20 h-[30rem] w-[30rem] rounded-full bg-emerald-100/70 blur-3xl" />
+      <GlassCard className="relative grid w-full max-w-6xl overflow-hidden rounded-[2rem] border-white/80 bg-white shadow-[0_32px_100px_-42px_rgba(12,37,45,0.38)] lg:min-h-[690px] lg:grid-cols-[0.92fr_1.08fr]">
+        <aside className="relative isolate flex min-h-[220px] flex-col overflow-hidden bg-night-900 px-5 py-5 text-white sm:min-h-[270px] sm:px-10 sm:py-9 lg:min-h-full lg:px-12 lg:py-11">
+          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_15%_5%,rgba(104,180,157,0.35),transparent_40%),radial-gradient(ellipse_at_95%_95%,rgba(52,143,120,0.25),transparent_45%)]" />
+          <div aria-hidden="true" className="absolute -right-28 top-24 -z-10 h-80 w-80 rounded-full border border-white/10" />
+          <div aria-hidden="true" className="absolute -right-16 top-36 -z-10 h-56 w-56 rounded-full border border-white/10" />
 
-        <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl bg-white/55 p-1.5 sm:grid-cols-5" role="tablist" aria-label="Account role">
-          {roleOptions.map(({ id, label, icon: Icon }) => (
-            <button key={id} type="button" role="tab" aria-selected={role === id} onClick={() => { setRole(id); setRegistering(false); setError('') }} className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-medium transition-colors ${role === id ? 'bg-night-900 text-white shadow-sm' : 'text-ink/60 hover:bg-white/70 hover:text-ink'}`}>
-              <Icon className="h-4 w-4" />{label}
-            </button>
-          ))}
-        </div>
-
-        <form onSubmit={submit} className="space-y-4">
-          {registering && (
-          <label className="block text-sm font-medium">Admin username
-            <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" maxLength={80} required className="mt-1.5 h-11 w-full rounded-xl border border-ink/10 bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-lilac-500/60" />
-            </label>
-          )}
-          <label className="block text-sm font-medium">Email
-            <span className="relative mt-1.5 block">
-              <Mail aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
-              <input type="text" inputMode="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} maxLength={255} required className="h-11 w-full rounded-xl border border-ink/10 bg-white pl-10 pr-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-lilac-500/60" />
+          <div className="flex items-center gap-3">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/10 ring-1 ring-white/15 backdrop-blur">
+              <GraduationCap className="h-7 w-7 text-lilac-200" />
             </span>
-            <span className="mt-1 block text-xs font-normal text-ink/50">Use the email address linked to your account.</span>
-          </label>
-          {registering && (
-            <label className="block text-sm font-medium">Confirm password
-              <input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={12} required className="mt-1.5 h-11 w-full rounded-xl border border-ink/10 bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-lilac-500/60" />
-            </label>
-          )}
-          <label className="block text-sm font-medium">Password
-            <span className="relative mt-1.5 block">
-              <LockKeyhole aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
-              <input type={showPassword ? 'text' : 'password'} autoComplete={registering ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} minLength={registering ? 12 : undefined} required className="h-11 w-full rounded-xl border border-ink/10 bg-white py-2 pl-10 pr-12 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-lilac-500/60" />
-              <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword((value) => !value)} className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-ink/50 hover:bg-ink/5 hover:text-ink">
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </span>
-          </label>
-
-          {!registering && (
-            <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-              <label className="inline-flex cursor-pointer items-center gap-2 text-ink/65">
-                <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} className="h-4 w-4 rounded border-ink/20 accent-lilac-600" />
-                Remember me
-              </label>
-              {role !== 'teacher' && role !== 'student' && (
-                <button type="button" onClick={() => { setResetOpen(true); setError('') }} className="font-medium text-lilac-700 hover:underline">Forgot Password?</button>
-              )}
+            <div>
+              <p className="text-lg font-semibold tracking-tight">Scholara</p>
+              <p className="text-xs tracking-wide text-white/55">SCHOOL MANAGEMENT</p>
             </div>
-          )}
-
-          {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
-          {message && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}
-          <button type="submit" disabled={busy} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-night-900 px-4 text-sm font-semibold text-white shadow-lg shadow-night-900/10 transition hover:bg-night-800 disabled:cursor-wait disabled:opacity-60">
-            {busy && <LoaderCircle className="h-4 w-4 animate-spin" />}
-            {busy ? 'Please wait…' : registering ? 'Set up administrator account' : `Sign in as ${ROLES[role].label}`}
-          </button>
-        </form>
-
-        {role === 'admin' && !registering && adminSignupAvailable === true && (
-          <button type="button" onClick={() => { setRegistering(true); setError(''); setMessage('') }} className="mt-5 w-full text-center text-sm font-medium text-lilac-700 hover:underline">
-            Create an Admin account
-          </button>
-        )}
-        {role === 'admin' && !registering && adminSignupAvailable === false && (
-          <div className="mt-5 space-y-3">
-            <p className="text-center text-xs text-ink/55">
-              Admin requests are temporarily unavailable. Apply the latest Admin review migration in Supabase.
-            </p>
           </div>
-        )}
-        {registering && (
-          <button type="button" onClick={() => { setRegistering(false); setError(''); setMessage('') }} className="mt-5 w-full text-center text-sm font-medium text-lilac-700 hover:underline">
-            Back to sign in
-          </button>
-        )}
+
+          <div className="my-5 max-w-md sm:my-10 lg:my-auto lg:py-12">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3 py-1.5 text-xs font-medium text-lilac-100">
+              <Sparkles className="h-3.5 w-3.5" /> A brighter way to run your school
+            </span>
+            <h2 className="mt-5 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-[2.7rem]">
+              Every school day,
+              <span className="mt-1 block text-lilac-200">beautifully in sync.</span>
+            </h2>
+            <p className="mt-4 hidden max-w-sm text-sm leading-6 text-white/65 sm:block sm:text-base">
+              Bring your people, progress, and day-to-day school life together in one thoughtful space.
+            </p>
+
+            <div className="mt-7 hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-1">
+              <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-3.5">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-lilac-400/15 text-lilac-200">
+                  <BookOpenCheck className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-sm font-medium">A clearer view of school life</p>
+                  <p className="mt-0.5 text-xs text-white/50">Everything important, thoughtfully organized.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-3.5">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-lilac-400/15 text-lilac-200">
+                  <ShieldCheck className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-sm font-medium">The right space for everyone</p>
+                  <p className="mt-0.5 text-xs text-white/50">Dedicated access for your school community.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="hidden text-xs text-white/40 lg:block">Made for the people who make every school day matter.</p>
+        </aside>
+
+        <section className="flex items-center justify-center px-5 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12">
+          <div className="w-full max-w-md">
+            <div className="mb-7">
+              <p className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-lilac-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-lilac-500" />
+                Secure institute portal
+              </p>
+              <h1 className="text-2xl font-semibold tracking-tight text-night-900 sm:text-3xl">
+                {registering ? 'Create your account' : 'Welcome back'}
+              </h1>
+              <p className="mt-2 text-sm leading-6 text-ink/55">
+                {registering ? 'Set up an administrator account for your institute.' : 'Sign in to pick up right where your school left off.'}
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-ink/45">Continue as</p>
+              <div className="grid grid-cols-3 gap-2 rounded-2xl bg-[#f3f7f5] p-1.5" role="tablist" aria-label="Account role">
+                {roleOptions.map(({ id, label, icon: Icon }) => (
+                  <button key={id} type="button" role="tab" aria-selected={role === id} onClick={() => { setRole(id); setRegistering(false); setError('') }} className={`inline-flex h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lilac-500 focus-visible:ring-offset-2 ${role === id ? 'bg-white text-night-900 shadow-sm ring-1 ring-black/[0.04]' : 'text-ink/55 hover:bg-white/70 hover:text-ink'}`}>
+                    <Icon className="h-4 w-4" />{label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <form onSubmit={submit} className="space-y-4">
+              {registering && (
+                <label className="block text-sm font-medium text-ink">Admin username
+                  <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" maxLength={80} required className="mt-1.5 h-12 w-full rounded-xl border border-ink/10 bg-white px-3.5 text-sm outline-none transition focus:border-lilac-500/60 focus:ring-4 focus:ring-lilac-500/10" />
+                </label>
+              )}
+              <label className="block text-sm font-medium text-ink">Email address
+                <span className="relative mt-1.5 block">
+                  <Mail aria-hidden="true" className="absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink/35" />
+                  <input type="text" inputMode="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} maxLength={255} required className="h-12 w-full rounded-xl border border-ink/10 bg-white pl-11 pr-3.5 text-sm font-normal outline-none transition placeholder:text-ink/35 focus:border-lilac-500/60 focus:ring-4 focus:ring-lilac-500/10" placeholder="you@school.edu" />
+                </span>
+              </label>
+              {registering && (
+                <label className="block text-sm font-medium text-ink">Confirm password
+                  <input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={12} required className="mt-1.5 h-12 w-full rounded-xl border border-ink/10 bg-white px-3.5 text-sm outline-none transition focus:border-lilac-500/60 focus:ring-4 focus:ring-lilac-500/10" />
+                </label>
+              )}
+              <label className="block text-sm font-medium text-ink">Password
+                <span className="relative mt-1.5 block">
+                  <LockKeyhole aria-hidden="true" className="absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink/35" />
+                  <input type={showPassword ? 'text' : 'password'} autoComplete={registering ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} minLength={registering ? 12 : undefined} required className="h-12 w-full rounded-xl border border-ink/10 bg-white py-2 pl-11 pr-12 text-sm font-normal outline-none transition focus:border-lilac-500/60 focus:ring-4 focus:ring-lilac-500/10" placeholder="Enter your password" />
+                  <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword((value) => !value)} className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-ink/45 transition hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lilac-500">
+                    {showPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
+                  </button>
+                </span>
+              </label>
+
+              {!registering && (
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5 text-sm">
+                  <label className="inline-flex cursor-pointer items-center gap-2 text-ink/60">
+                    <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} className="h-4 w-4 rounded border-ink/20 accent-lilac-600" />
+                    Remember me
+                  </label>
+                  {role !== 'teacher' && role !== 'student' && (
+                    <button type="button" onClick={() => { setResetOpen(true); setError('') }} className="font-medium text-lilac-600 transition hover:text-lilac-700 hover:underline">Forgot password?</button>
+                  )}
+                </div>
+              )}
+
+              {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
+              {message && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}
+              <button type="submit" disabled={busy} className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-night-900 px-4 text-sm font-semibold text-white shadow-lg shadow-night-900/15 transition hover:-translate-y-0.5 hover:bg-night-800 hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-lilac-500/30 disabled:cursor-wait disabled:opacity-60 disabled:hover:translate-y-0">
+                {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+                {busy ? 'Please wait…' : registering ? 'Set up administrator account' : `Sign in as ${ROLES[role].label}`}
+                {!busy && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />}
+              </button>
+            </form>
+
+            {role === 'admin' && !registering && adminSignupAvailable === true && (
+              <p className="mt-5 text-center text-sm text-ink/55">
+                New to Scholara?{' '}
+                <button type="button" onClick={() => { setRegistering(true); setError(''); setMessage('') }} className="font-semibold text-lilac-600 hover:text-lilac-700 hover:underline">
+                  Create an Admin account
+                </button>
+              </p>
+            )}
+            {role === 'admin' && !registering && adminSignupAvailable === false && (
+              <p className="mt-5 text-center text-xs leading-5 text-ink/50">
+                Admin requests are temporarily unavailable. Apply the latest Admin review migration in Supabase.
+              </p>
+            )}
+            {registering && (
+              <button type="button" onClick={() => { setRegistering(false); setError(''); setMessage('') }} className="mt-5 w-full text-center text-sm font-semibold text-lilac-600 hover:text-lilac-700 hover:underline">
+                Back to sign in
+              </button>
+            )}
+            <div className="mt-7 flex items-center justify-center gap-2 border-t border-ink/[0.07] pt-5 text-xs text-ink/40">
+              <ShieldCheck className="h-4 w-4 text-lilac-600/70" />
+              Your school account is protected and private.
+            </div>
+          </div>
+        </section>
       </GlassCard>
       {resetOpen && <PasswordResetModal initialEmail={email} onClose={() => setResetOpen(false)} />}
     </main>
