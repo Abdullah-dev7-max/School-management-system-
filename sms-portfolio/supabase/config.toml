@@ -3,3 +3,6 @@ verify_jwt = true
 
 [functions.role-auth]
 verify_jwt = false
+
+[functions.admin-access]
+verify_jwt = true

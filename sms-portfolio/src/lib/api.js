@@ -87,6 +87,28 @@ export async function saveInstituteSettings(settings) {
   }, { onConflict: 'id' }))
 }
 
+export async function fetchAdminAccessRequests() {
+  return unwrap(await supabase.rpc('list_admin_access_requests')) ?? []
+}
+
+export async function approveAdminAccessRequest(requestId) {
+  const { data, error } = await supabase.functions.invoke('admin-access', {
+    body: { requestId },
+  })
+  if (error) {
+    let message = error.message
+    try {
+      const payload = await error.context?.json()
+      if (payload?.error) message = payload.error
+    } catch {
+      // Keep the Functions client error when the response has no JSON body.
+    }
+    throw new Error(message)
+  }
+  if (data?.success !== true) throw new Error(data?.error || 'Admin approval did not complete.')
+  return data
+}
+
 export async function fetchStudentDirectory() {
   return unwrap(
     await supabase

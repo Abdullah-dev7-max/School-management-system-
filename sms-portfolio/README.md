@@ -44,6 +44,7 @@ In Supabase **SQL Editor**, run these scripts in order:
 20. `database/admin_approval_migration.sql`
 21. `database/admin_single_active_migration.sql`
 22. `database/admin_signup_reopen_after_auth_delete_migration.sql`
+23. `database/admin_review_handoff_migration.sql`
 
 These scripts are safe to rerun and do not reset existing tables. The
 production security migration removes only the former application's known
@@ -55,37 +56,55 @@ Enable email/password sign-in and email confirmation in Supabase
 **Authentication → Providers**. On the Admin login tab, choose **Create an
 Admin account** and enter a username, email, and password. Passwords are
 handled by Supabase Auth and are never written to `public.users` in plaintext.
-Each request creates an unapproved Admin profile. Confirm the email, then a
-developer must approve that specific profile in Supabase SQL Editor before it
-can access the Admin dashboard. Only one Admin can be approved at a time.
-Once an Admin is approved, new Admin requests are closed. To allow another
-person to request access, remove the active Admin profile from `public.users`
-or revoke its approval in SQL Editor. The Auth account itself is separate; if
-you want to reuse that same email for a new signup, also delete the old Auth
-user from **Authentication → Users**. If Auth users were deleted before their
-profiles, rerun `database/admin_signup_reopen_after_auth_delete_migration.sql`
-to clear orphaned links and reopen signup.
+Each request creates an unapproved Admin profile. The applicant must confirm
+their email, then the active Admin reviews the request in **Settings → Admin
+access requests**. Approving transfers the single active Admin seat to the
+applicant and signs out the previous Admin. An unconfirmed request cannot be
+approved.
 
-Approve a confirmed request by replacing the example email and running:
+If there is no active Admin to review the first request, bootstrap the first
+Admin by replacing the email below and running this one-time query in SQL
+Editor. It only approves an Auth-linked, email-confirmed request when no other
+Admin is approved:
 
 ```sql
-update public.users
+update public.users u
 set is_approved = true
-where lower(email) = lower('admin@example.com')
-  and role = 'admin'
-  and auth_user_id is not null
+where lower(trim(u.email)) = lower(trim('admin@example.com'))
+  and u.role::text = 'admin'
+  and u.auth_user_id is not null
   and exists (
     select 1
-    from auth.users
-    where auth.users.id = public.users.auth_user_id
-      and auth.users.email_confirmed_at is not null
+    from auth.users a
+    where a.id = u.auth_user_id
+      and lower(trim(a.email)) = lower(trim(u.email))
+      and a.email_confirmed_at is not null
   )
-returning username, email, role, is_approved;
+  and not exists (
+    select 1
+    from public.users active_admin
+    where active_admin.role::text = 'admin'
+      and active_admin.is_approved
+      and active_admin.id <> u.id
+  )
+returning u.username, u.email, u.is_approved;
 ```
 
-The query returns no row if the email has not been confirmed or no matching
-Admin request exists. To revoke Admin access, set `is_approved = false` for
-that Admin profile in SQL Editor.
+Approval notification emails are sent by the `admin-access` Edge Function.
+Deploy it and configure a Resend sender:
+
+```powershell
+supabase functions deploy admin-access
+supabase secrets set RESEND_API_KEY=re_... ADMIN_APPROVAL_FROM_EMAIL="Scholara <admin@your-verified-domain>"
+```
+
+Verify the sender domain with Resend first. To deliver Supabase signup
+confirmation emails reliably and avoid the built-in email rate limit, configure
+the provider as custom SMTP under Supabase **Authentication → SMTP Settings**.
+Never put an email-provider API key in the browser app or a `VITE_` variable.
+If the approval email is not configured or delivery fails, the app reports
+that clearly; access transfer remains in effect and the approved Admin can
+still sign in.
 Configure Supabase Auth's password policy and rate limits to enforce the
 institute's deployment requirements.
 Add the deployed site's `/reset-password` URL to the Supabase Auth redirect URL
@@ -103,9 +122,9 @@ Supabase Auth account when their email matches and Supabase confirms the email.
 The Admin signup recovery migration repairs an unlinked initial Admin profile
 and lets the authorized signup complete by linking the matching email instead
 of trying to insert a duplicate profile.
-The open initial Admin signup migration is followed by the Admin approval
-migration, which lets people submit Admin requests while restricting dashboard
-and data access to the single manually approved, email-confirmed Admin.
+The Admin review handoff migration allows pending requests while preserving
+one active Admin. Only that active Admin can review confirmed requests and
+transfer access; the database revokes the previous Admin's approval atomically.
 
 ### Staff and student accounts
 

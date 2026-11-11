@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Building2, Check, Info, Save, UserRound } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Building2, Check, Clock3, Info, LoaderCircle, MailCheck, Save, ShieldCheck, UserRound } from 'lucide-react'
 import { useAsync } from '../hooks/useAsync.js'
 import { useRole } from '../context/RoleContext.jsx'
-import { fetchInstituteSettings, saveInstituteSettings } from '../lib/api.js'
+import { approveAdminAccessRequest, fetchAdminAccessRequests, fetchInstituteSettings, saveInstituteSettings } from '../lib/api.js'
 import GlassCard from '../components/ui/GlassCard.jsx'
 import SectionHeader from '../components/ui/SectionHeader.jsx'
 import { Field, FORM_BUTTON, FormError, ManagementError } from '../components/admin/ManagementUi.jsx'
@@ -14,6 +15,97 @@ function Feedback({ error, message }) {
     return <p role="status" className="flex items-center gap-2 text-sm text-emerald-700"><Check className="h-4 w-4" />{message}</p>
   }
   return null
+}
+
+function AdminAccessRequests() {
+  const requestsQuery = useAsync(fetchAdminAccessRequests, [], ['users'])
+  const { signOut } = useRole()
+  const navigate = useNavigate()
+  const [approvingId, setApprovingId] = useState(null)
+  const [error, setError] = useState('')
+
+  const approve = async (request) => {
+    const confirmed = window.confirm(
+      `Approve ${request.full_name} (${request.email}) and transfer Admin access? Your current Admin access will be revoked and you will be signed out.`
+    )
+    if (!confirmed) return
+
+    setApprovingId(request.id)
+    setError('')
+    try {
+      const result = await approveAdminAccessRequest(request.id)
+      const notice = result.emailSent
+        ? `Admin access was transferred to ${request.email}. An approval email was sent.`
+        : `Admin access was transferred to ${request.email}, but the approval email could not be sent. Configure the approval email sender; the new Admin can still sign in.`
+      try {
+        await signOut()
+      } catch (signOutError) {
+        setError(`Access was transferred, but sign-out failed. Your Admin access is revoked; reload this page or return to login. ${signOutError.message}`)
+        return
+      }
+      navigate('/login', { replace: true, state: { notice } })
+    } catch (approvalError) {
+      setError(approvalError.message || 'Could not transfer Admin access.')
+    } finally {
+      setApprovingId(null)
+    }
+  }
+
+  return (
+    <GlassCard className="p-5 sm:p-6">
+      <div className="mb-4 flex items-start gap-3">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-lilac-100 text-lilac-600">
+          <ShieldCheck className="h-5 w-5" />
+        </span>
+        <div>
+          <h2 className="font-semibold">Admin access requests</h2>
+          <p className="text-sm text-ink/55">Review the applicant and confirm their email before granting access.</p>
+        </div>
+      </div>
+
+      <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        Approving a request transfers the single active Admin seat to that person. Your Admin access will be revoked.
+      </div>
+
+      {requestsQuery.error && <FormError>{requestsQuery.error.message}</FormError>}
+      {error && <FormError>{error}</FormError>}
+      {requestsQuery.loading && <p className="text-sm text-ink/55">Loading requests…</p>}
+      {!requestsQuery.loading && !requestsQuery.error && requestsQuery.data?.length === 0 && (
+        <p className="text-sm text-ink/55">There are no pending Admin requests.</p>
+      )}
+
+      <div className="space-y-3">
+        {requestsQuery.data?.map((request) => (
+          <article key={request.id} className="rounded-2xl border border-ink/10 bg-white/70 p-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="truncate font-semibold">{request.full_name}</p>
+                <p className="break-all text-sm text-ink/65">{request.email}</p>
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-ink/50">
+                  <Clock3 className="h-3.5 w-3.5" />
+                  Requested {new Date(request.created_at).toLocaleString()}
+                </p>
+                <p className={`mt-2 flex items-center gap-1.5 text-xs font-medium ${request.email_confirmed ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  <MailCheck className="h-4 w-4" />
+                  {request.email_confirmed ? 'Email confirmed' : 'Waiting for email confirmation'}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={!request.email_confirmed || approvingId !== null}
+                onClick={() => approve(request)}
+                className={`${FORM_BUTTON} shrink-0 bg-night-900 text-white`}
+              >
+                {approvingId === request.id
+                  ? <><LoaderCircle className="mr-2 h-4 w-4 animate-spin" />Transferring…</>
+                  : 'Approve & transfer access'}
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </GlassCard>
+  )
 }
 
 export default function Settings() {
@@ -103,6 +195,8 @@ export default function Settings() {
       <GlassCard className="p-5 sm:p-6">
         <SectionHeader title="Settings" description="Keep administrator and school information up to date." />
       </GlassCard>
+
+      <AdminAccessRequests />
 
       <div className="grid items-start gap-5 xl:grid-cols-2">
         <GlassCard className="p-5 sm:p-6">

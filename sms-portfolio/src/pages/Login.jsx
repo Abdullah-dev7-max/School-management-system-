@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, GraduationCap, LoaderCircle, LockKeyhole, Mail, X } from 'lucide-react'
 import { ROLES } from '../config/navigation.js'
 import { useRole } from '../context/RoleContext.jsx'
@@ -60,6 +60,7 @@ function PasswordResetModal({ initialEmail, onClose }) {
 
 export default function Login() {
   const { signIn, signInRole, signOut } = useRole()
+  const location = useLocation()
   const navigate = useNavigate()
   const [role, setRole] = useState('admin')
   const [email, setEmail] = useState('')
@@ -73,7 +74,7 @@ export default function Login() {
   const [adminSignupAvailable, setAdminSignupAvailable] = useState(null)
   const [resetOpen, setResetOpen] = useState(false)
   const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState(location.state?.notice ?? '')
 
   useEffect(() => {
     let active = true
@@ -110,7 +111,7 @@ export default function Login() {
         if (statusError) throw statusError
         if (requestOpen !== true) {
           setAdminSignupAvailable(false)
-          throw new Error('An Admin already has access. New Admin requests are closed.')
+          throw new Error('Admin requests are unavailable. Apply the latest Admin review migration in Supabase.')
         }
         const { data: signupData, error: signupError } = await supabase.auth.signUp({
           email: email.trim(),
@@ -129,7 +130,7 @@ export default function Login() {
           const { error: signOutError } = await supabase.auth.signOut()
           if (signOutError) throw new Error(`Admin request was created, but the pending session could not be cleared: ${signOutError.message}`)
         }
-        setMessage('Admin request created. Confirm your email, then wait for the developer to approve your account before signing in.')
+        setMessage('Admin request submitted. Confirm your email; the active Admin will review it. If no Admin is active, the institute owner must approve the first request.')
         setRegistering(false)
         setConfirmPassword('')
       } else {
@@ -241,7 +242,7 @@ export default function Login() {
         {role === 'admin' && !registering && adminSignupAvailable === false && (
           <div className="mt-5 space-y-3">
             <p className="text-center text-xs text-ink/55">
-              An Admin currently has access. New Admin requests are closed until that account is removed or approval is revoked.
+              Admin requests are temporarily unavailable. Apply the latest Admin review migration in Supabase.
             </p>
           </div>
         )}
