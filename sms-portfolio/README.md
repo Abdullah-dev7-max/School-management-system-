@@ -39,6 +39,7 @@ In Supabase **SQL Editor**, run these scripts in order:
 15. `database/class_announcements_migration.sql`
 16. `database/remove_parent_portal_migration.sql`
 17. `database/credential_access_migration.sql`
+18. `database/admin_signup_recovery_migration.sql`
 
 These scripts are safe to rerun and do not reset existing tables. The
 production security migration removes only the former application's known
@@ -74,6 +75,9 @@ user, teacher, and student credential records.
 The migrations replace broad anonymous access with authenticated, role-limited
 policies. The login profile migration links an existing institute profile to a
 Supabase Auth account when their email matches and Supabase confirms the email.
+The Admin signup recovery migration repairs an unlinked initial Admin profile
+and lets the authorized signup complete by linking the matching email instead
+of trying to insert a duplicate profile.
 
 ### Staff and student accounts
 
