@@ -170,12 +170,7 @@ export function RoleProvider({ children }) {
       return nextProfile
     } catch (profileLoadError) {
       setProfile(null)
-      const { error: signOutError } = await supabase.auth.signOut()
-      setSession(null)
-      if (signOutError) {
-        setProfileLoading(false)
-        throw new Error(`${profileLoadError.message} Sign-out also failed: ${signOutError.message}`)
-      }
+      setProfileError(profileLoadError)
       throw profileLoadError
     } finally {
       setProfileLoading(false)
@@ -229,6 +224,24 @@ export function RoleProvider({ children }) {
     setProfile(data)
   }, [session?.user])
 
+  const refreshProfile = useCallback(async () => {
+    if (!session?.user) throw new Error('Sign in before checking Admin access again.')
+    setProfileLoading(true)
+    setProfileError(null)
+    try {
+      const nextProfile = await fetchUserProfile(session.user)
+      setProfile(nextProfile)
+      setProfileError(null)
+      return nextProfile
+    } catch (error) {
+      setProfile(null)
+      setProfileError(error)
+      throw error
+    } finally {
+      setProfileLoading(false)
+    }
+  }, [session?.user])
+
   const value = useMemo(() => {
     const current = ROLES[profile?.role] ?? ROLES.admin
     return {
@@ -244,9 +257,10 @@ export function RoleProvider({ children }) {
       signIn,
       signInRole,
       signOut,
+      refreshProfile,
       updateProfileName,
     }
-  }, [profile, session, initialized, profileLoading, profileError, signIn, signInRole, signOut, updateProfileName])
+  }, [profile, session, initialized, profileLoading, profileError, signIn, signInRole, signOut, refreshProfile, updateProfileName])
 
   return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>
 }

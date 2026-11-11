@@ -20,7 +20,7 @@ import Timetable from './pages/Timetable.jsx'
 import Settings from './pages/Settings.jsx'
 import Placeholder from './pages/Placeholder.jsx'
 import { useRole } from './context/RoleContext.jsx'
-import { LogOut } from 'lucide-react'
+import { LoaderCircle, LogOut, RefreshCw } from 'lucide-react'
 import LoadingScreen from './components/ui/LoadingScreen.jsx'
 
 const roleHome = {
@@ -36,8 +36,10 @@ function RequireRole({ role, children }) {
 }
 
 export default function App() {
-  const { initialized, profileLoading, profile, profileError, session, signOut } = useRole()
+  const { initialized, profileLoading, profile, profileError, session, signOut, refreshProfile } = useRole()
   const [signOutError, setSignOutError] = useState('')
+  const [profileCheckError, setProfileCheckError] = useState('')
+  const [checkingProfile, setCheckingProfile] = useState(false)
   const location = useLocation()
 
   if (location.pathname === '/reset-password' && initialized) return <ResetPasswordPage />
@@ -51,6 +53,28 @@ export default function App() {
           <p className="font-semibold">Could not verify this institute account</p>
           <p className="mt-2">{profileError.message}</p>
           {signOutError && <p className="mt-2">{signOutError}</p>}
+          {profileCheckError && <p role="alert" className="mt-2">{profileCheckError}</p>}
+          {profileError.message.includes('Admin access is waiting for approval') && (
+            <p className="mt-2">
+              This notice will stay here until you sign out or access is approved. After approval, choose “Check access again” to continue.
+            </p>
+          )}
+          {session?.user && (
+            <button type="button" disabled={checkingProfile} onClick={async () => {
+              setCheckingProfile(true)
+              setProfileCheckError('')
+              try {
+                await refreshProfile()
+              } catch (error) {
+                setProfileCheckError(error.message)
+              } finally {
+                setCheckingProfile(false)
+              }
+            }} className="mt-4 inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-white px-4 py-2 text-rose-800 disabled:opacity-60">
+              {checkingProfile ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Check access again
+            </button>
+          )}
           <button type="button" onClick={async () => {
             try {
               await signOut()
@@ -58,7 +82,7 @@ export default function App() {
             } catch (error) {
               setSignOutError(error.message)
             }
-          }} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-night-900 px-4 py-2 text-white">
+          }} className="mt-4 ml-2 inline-flex items-center gap-2 rounded-xl bg-night-900 px-4 py-2 text-white">
             <LogOut className="h-4 w-4" />Sign out
           </button>
         </div>
