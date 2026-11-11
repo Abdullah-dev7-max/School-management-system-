@@ -40,6 +40,7 @@ In Supabase **SQL Editor**, run these scripts in order:
 16. `database/remove_parent_portal_migration.sql`
 17. `database/credential_access_migration.sql`
 18. `database/admin_signup_recovery_migration.sql`
+19. `database/open_initial_admin_signup_migration.sql`
 
 These scripts are safe to rerun and do not reset existing tables. The
 production security migration removes only the former application's known
@@ -47,20 +48,13 @@ deterministic sample accounts, their dependent records, and sample notices.
 
 ### Initial administrator account
 
-Before creating an account, add the one permitted initial admin email in SQL
-Editor, replacing the value with the institute administrator's actual email:
-
-```sql
-insert into public.admin_signup_allowlist (id, email)
-values (true, lower(trim('admin@your-institute.org')))
-on conflict (id) do update set email = excluded.email;
-```
-
 Enable email/password sign-in and email confirmation in Supabase
-**Authentication → Providers**. Login uses Supabase Auth directly. Initial
-administrator setup is authorized by the database trigger only when the email
-matches the allowlist; the trigger creates the admin profile and consumes that
-entry.
+**Authentication → Providers**. Login uses Supabase Auth directly. The initial
+administrator can choose their name, email, and password in the app. This
+one-time signup is open to whoever claims it first, so complete setup only
+when the intended administrator is ready. The database closes signup as soon
+as the first Admin account is created, and email confirmation is required
+before the Admin profile can be accessed.
 Configure Supabase Auth's password policy and rate limits to enforce the
 institute's deployment requirements.
 Add the deployed site's `/reset-password` URL to the Supabase Auth redirect URL
@@ -78,6 +72,10 @@ Supabase Auth account when their email matches and Supabase confirms the email.
 The Admin signup recovery migration repairs an unlinked initial Admin profile
 and lets the authorized signup complete by linking the matching email instead
 of trying to insert a duplicate profile.
+The open initial Admin signup migration allows one first Admin registration
+without a preconfigured email. It closes the signup gate as soon as the Auth
+user is created, requires email confirmation before profile access, and provides
+a confirmation resend action on the login page while setup is pending.
 
 ### Staff and student accounts
 
