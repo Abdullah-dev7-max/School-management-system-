@@ -128,16 +128,16 @@ begin
     raise exception 'The authenticated account does not have an email address.';
   end if;
 
-  if auth_record.email_confirmed_at is null then
-    raise exception 'Confirm your email address before accessing the Admin dashboard.';
-  end if;
-
   select * into profile_record
   from public.users
   where auth_user_id = auth_record.id;
 
   if not found then
     raise exception 'This account is not linked to an institute profile.';
+  end if;
+
+  if profile_record.role = 'admin' and auth_record.email_confirmed_at is null then
+    raise exception 'Confirm your email address before accessing the Admin dashboard.';
   end if;
 
   return profile_record;

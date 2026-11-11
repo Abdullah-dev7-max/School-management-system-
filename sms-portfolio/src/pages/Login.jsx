@@ -272,9 +272,13 @@ export default function Login() {
             Set up the initial administrator account
           </button>
         )}
-        {role === 'admin' && !registering && adminSignupAvailable === false && adminConfirmationPending && (
+        {role === 'admin' && !registering && adminSignupAvailable === false && (
           <div className="mt-5 space-y-3">
-            <p className="text-center text-xs text-ink/55">Admin setup has already started or is complete. Confirm the Admin email before signing in.</p>
+            <p className="text-center text-xs text-ink/55">
+              {adminConfirmationPending
+                ? 'Initial Admin setup is already claimed and waiting for email confirmation. Use the same email entered during setup; a second Admin account cannot be initialized.'
+                : 'Initial Admin setup has already been claimed. If you have not confirmed the setup email yet, enter that same email and resend confirmation. If confirmed, sign in to the existing Admin account.'}
+            </p>
             <button type="button" disabled={busy} onClick={resendAdminConfirmation} className="w-full text-center text-sm font-medium text-lilac-700 hover:underline disabled:opacity-60">
               Resend Admin confirmation email
             </button>
