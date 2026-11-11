@@ -1,8 +1,8 @@
 import { GraduationCap } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 
-function Skeleton({ className = '', dark = false }) {
-  return <div className={`skeleton-shimmer${dark ? ' skeleton-shimmer-dark' : ''} rounded-xl ${className}`} />
+function Skeleton({ className = '' }) {
+  return <div className={`skeleton-shimmer rounded-xl ${className}`} />
 }
 
 function StatCard() {
@@ -317,33 +317,6 @@ export default function LoadingScreen({ label = 'Preparing your workspace' }) {
       className="fixed inset-0 z-[100] flex min-h-screen overflow-hidden bg-canvas text-ink"
     >
       <span className="sr-only">{label}</span>
-
-      <aside aria-hidden="true" className="sidebar-surface hidden w-[252px] shrink-0 flex-col px-5 py-6 lg:flex">
-        <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-lilac-400 to-lilac-600 text-white shadow-glow">
-            <GraduationCap className="h-5 w-5" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-white">Scholara</p>
-            <p className="mt-1 text-[11px] text-white/45">School management</p>
-          </div>
-        </div>
-        <div className="mt-12 space-y-3">
-          {Array.from({ length: 6 }, (_, index) => (
-            <div key={index} className={`flex h-11 items-center gap-3 rounded-xl px-3 ${index === 0 ? 'bg-white/10' : ''}`}>
-              <Skeleton dark className="h-4 w-4 rounded-md" />
-              <Skeleton dark className="h-3 w-28" />
-            </div>
-          ))}
-        </div>
-        <div className="mt-auto flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-          <Skeleton dark className="h-9 w-9 shrink-0 rounded-full" />
-          <div className="min-w-0 flex-1">
-            <Skeleton dark className="h-3 w-24" />
-            <Skeleton dark className="mt-2 h-2.5 w-32" />
-          </div>
-        </div>
-      </aside>
 
       <section aria-hidden="true" className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="pointer-events-none absolute -right-24 -top-32 h-80 w-80 rounded-full bg-lilac-300/30 blur-3xl" />
