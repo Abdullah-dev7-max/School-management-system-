@@ -16,6 +16,10 @@ function throwProfileInsertError(error) {
 }
 
 const className = (c) => (c ? `${c.name} ${c.section}` : 'Unassigned')
+const currentAcademicYear = () => {
+  const year = new Date().getFullYear()
+  return `${year}-${String((year + 1) % 100).padStart(2, '0')}`
+}
 
 /* ----------------------------- Admin ----------------------------- */
 
@@ -58,10 +62,15 @@ export async function fetchInstituteSettings() {
     .from('institute_settings')
     .select('*')
     .limit(1)
-    .single()
+    .maybeSingle()
 
   if (error) throw error
-  return data
+  return data ?? {
+    school_name: '',
+    address: null,
+    contact_email: '',
+    academic_year: currentAcademicYear(),
+  }
 }
 
 export async function fetchRoleDashboard(profile, sessionToken) {
@@ -292,7 +301,7 @@ export async function fetchClassesPage() {
       classTeacher: item.class_teacher_id ? teacherById[item.class_teacher_id]?.teacher?.full_name ?? null : null,
     })),
     teachers,
-    academicYear: settings?.academic_year ?? `${new Date().getFullYear()}-${String((new Date().getFullYear() + 1) % 100).padStart(2, '0')}`,
+    academicYear: settings?.academic_year ?? currentAcademicYear(),
   }
 }
 
