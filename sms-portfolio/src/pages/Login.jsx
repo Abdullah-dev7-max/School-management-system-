@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, GraduationCap, LoaderCircle, LockKeyhole, Mail, X } from 'lucide-react'
 import { ROLES } from '../config/navigation.js'
@@ -68,36 +68,11 @@ export default function Login() {
   const [remember, setRemember] = useState(() => window.localStorage.getItem('scholara.auth.remember') !== 'false')
   const [busy, setBusy] = useState(false)
   const [registering, setRegistering] = useState(false)
-  const [fullName, setFullName] = useState('')
+  const [username, setUsername] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [adminSignupAvailable, setAdminSignupAvailable] = useState(null)
-  const [adminConfirmationPending, setAdminConfirmationPending] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-
-  useEffect(() => {
-    let active = true
-    Promise.all([
-      supabase.rpc('admin_signup_open'),
-      supabase.rpc('admin_signup_pending_confirmation'),
-    ]).then(([signupStatus, confirmationStatus]) => {
-      if (!active) return
-      if (signupStatus.error || confirmationStatus.error) {
-        setAdminSignupAvailable(false)
-        const statusError = signupStatus.error || confirmationStatus.error
-        setError(`Could not check initial Admin setup availability: ${statusError.message}`)
-        return
-      }
-      setAdminSignupAvailable(signupStatus.data === true)
-      setAdminConfirmationPending(confirmationStatus.data === true)
-    }).catch((statusError) => {
-      if (!active) return
-      setAdminSignupAvailable(false)
-      setError(`Could not check initial Admin setup availability: ${statusError.message || 'Network error'}`)
-    })
-    return () => { active = false }
-  }, [])
 
   const submit = async (event) => {
     event.preventDefault()
@@ -108,40 +83,30 @@ export default function Login() {
     try {
       if (!email.includes('@')) throw new Error('Enter the email address linked to your institute account.')
       if (registering) {
-        if (role !== 'admin') throw new Error('Only the initial administrator account can be set up here.')
+        if (role !== 'admin') throw new Error('Admin account requests are only available from the Admin role.')
         if (password.length < 12) throw new Error('Use a password with at least 12 characters.')
         if (password !== confirmPassword) throw new Error('The passwords do not match.')
-        const { data: signupOpen, error: signupStatusError } = await supabase.rpc('admin_signup_open')
-        if (signupStatusError) throw signupStatusError
-        if (signupOpen !== true) throw new Error('Admin setup has already started. Confirm the Admin email or sign in.')
-        const { error: signupError } = await supabase.auth.signUp({
+        if (!username.trim()) throw new Error('Enter a username for the Admin account.')
+        const { data: signupData, error: signupError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
-            data: { full_name: fullName.trim() },
+            data: {
+              account_type: 'admin_request',
+              username: username.trim(),
+              full_name: username.trim(),
+            },
             emailRedirectTo: `${window.location.origin}/login`,
           },
         })
-        if (signupError) {
-          const { data: signupStillOpen, error: statusError } = await supabase.rpc('admin_signup_open')
-          if (!statusError && signupStillOpen !== true) {
-            setRegistering(false)
-            setConfirmPassword('')
-            setAdminSignupAvailable(false)
-            const { data: confirmationPending, error: confirmationError } = await supabase.rpc('admin_signup_pending_confirmation')
-            if (confirmationError) {
-              throw new Error(`The one-time Admin setup has already been claimed. Sign in with the existing Admin account. Confirmation status could not be checked: ${confirmationError.message}`)
-            }
-            setAdminConfirmationPending(confirmationPending === true)
-            throw new Error('The one-time Admin setup has already been claimed. Sign in with the existing Admin account.')
-          }
-          throw signupError
+        if (signupError) throw signupError
+        if (signupData.session) {
+          const { error: signOutError } = await supabase.auth.signOut()
+          if (signOutError) throw new Error(`Admin request was created, but the pending session could not be cleared: ${signOutError.message}`)
         }
-        setMessage('Check your email and confirm the address before signing in to the Admin dashboard.')
+        setMessage('Admin request created. Confirm your email, then wait for the developer to approve your account before signing in.')
         setRegistering(false)
         setConfirmPassword('')
-        setAdminSignupAvailable(false)
-        setAdminConfirmationPending(true)
       } else {
         setRememberSession(remember)
         if (role === 'teacher' || role === 'student') {
@@ -221,11 +186,11 @@ export default function Login() {
 
         <form onSubmit={submit} className="space-y-4">
           {registering && (
-            <label className="block text-sm font-medium">Administrator full name
-              <input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" maxLength={160} required className="mt-1.5 h-11 w-full rounded-xl border border-ink/10 bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-lilac-500/60" />
+          <label className="block text-sm font-medium">Admin username
+            <input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" maxLength={80} required className="mt-1.5 h-11 w-full rounded-xl border border-ink/10 bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-lilac-500/60" />
             </label>
           )}
-          <label className="block text-sm font-medium">Email / Username
+          <label className="block text-sm font-medium">Email
             <span className="relative mt-1.5 block">
               <Mail aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
               <input type="text" inputMode="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} maxLength={255} required className="h-11 w-full rounded-xl border border-ink/10 bg-white pl-10 pr-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-lilac-500/60" />
@@ -267,17 +232,15 @@ export default function Login() {
           </button>
         </form>
 
-        {role === 'admin' && !registering && adminSignupAvailable === true && (
+        {role === 'admin' && !registering && (
           <button type="button" onClick={() => { setRegistering(true); setError(''); setMessage('') }} className="mt-5 w-full text-center text-sm font-medium text-lilac-700 hover:underline">
-            Set up the initial administrator account
+            Create an Admin account
           </button>
         )}
-        {role === 'admin' && !registering && adminSignupAvailable === false && (
+        {role === 'admin' && !registering && (
           <div className="mt-5 space-y-3">
             <p className="text-center text-xs text-ink/55">
-              {adminConfirmationPending
-                ? 'Initial Admin setup is already claimed and waiting for email confirmation. Use the same email entered during setup; a second Admin account cannot be initialized.'
-                : 'Initial Admin setup has already been claimed. If you have not confirmed the setup email yet, enter that same email and resend confirmation. If confirmed, sign in to the existing Admin account.'}
+              New Admin accounts require email confirmation and developer approval before dashboard access.
             </p>
             <button type="button" disabled={busy} onClick={resendAdminConfirmation} className="w-full text-center text-sm font-medium text-lilac-700 hover:underline disabled:opacity-60">
               Resend Admin confirmation email

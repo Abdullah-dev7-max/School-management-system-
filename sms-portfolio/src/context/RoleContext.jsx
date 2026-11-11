@@ -28,6 +28,9 @@ async function fetchUserProfile(user) {
   if (!profileRequests.has(user.id)) {
     const request = supabase.rpc('resolve_current_profile').then(({ data, error }) => {
       if (error) {
+        if (error.message.includes('Admin approval is pending')) {
+          throw new Error(error.message)
+        }
         throw new Error(
           `${error.message}. Make sure database/login_profile_link_migration.sql has been run in Supabase.`
         )
@@ -168,6 +171,12 @@ export function RoleProvider({ children }) {
     } catch (profileLoadError) {
       setProfile(null)
       setProfileError(profileLoadError)
+      const { error: signOutError } = await supabase.auth.signOut()
+      setSession(null)
+      if (signOutError) {
+        setProfileLoading(false)
+        throw new Error(`${profileLoadError.message} Sign-out also failed: ${signOutError.message}`)
+      }
       throw profileLoadError
     } finally {
       setProfileLoading(false)
