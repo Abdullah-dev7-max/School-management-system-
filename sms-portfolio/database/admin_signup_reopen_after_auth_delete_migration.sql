@@ -2,10 +2,17 @@
 -- Run after admin_single_active_migration.sql.
 
 update public.users
-set is_approved = false
+set auth_user_id = null,
+    is_approved = false
 where role = 'admin'
-  and auth_user_id is null
-  and is_approved;
+  and (
+    auth_user_id is null
+    or not exists (
+      select 1
+      from auth.users
+      where auth.users.id = public.users.auth_user_id
+    )
+  );
 
 create or replace function public.admin_signup_open()
 returns boolean
@@ -17,9 +24,9 @@ as $$
   select not exists (
     select 1
     from public.users
+    join auth.users on auth.users.id = public.users.auth_user_id
     where role = 'admin'
       and is_approved
-      and auth_user_id is not null
   );
 $$;
 revoke all on function public.admin_signup_open() from public;
@@ -45,9 +52,9 @@ begin
     if exists (
       select 1
       from public.users
+      join auth.users on auth.users.id = public.users.auth_user_id
       where role = 'admin'
         and is_approved
-        and auth_user_id is not null
     ) then
       raise exception 'An Admin already has access. New Admin requests are closed until that account is removed or approval is revoked.';
     end if;

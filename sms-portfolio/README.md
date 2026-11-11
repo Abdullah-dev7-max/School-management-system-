@@ -62,7 +62,9 @@ Once an Admin is approved, new Admin requests are closed. To allow another
 person to request access, remove the active Admin profile from `public.users`
 or revoke its approval in SQL Editor. The Auth account itself is separate; if
 you want to reuse that same email for a new signup, also delete the old Auth
-user from **Authentication → Users**.
+user from **Authentication → Users**. If Auth users were deleted before their
+profiles, rerun `database/admin_signup_reopen_after_auth_delete_migration.sql`
+to clear orphaned links and reopen signup.
 
 Approve a confirmed request by replacing the example email and running:
 
