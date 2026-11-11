@@ -72,7 +72,7 @@ function NavItem({ to, label, icon: Icon, collapsed, pillId, onNavigate }) {
               <motion.span
                 layoutId={`${pillId}-bar`}
                 transition={SPRING}
-                className="absolute -left-4 top-2.5 h-6 w-1 rounded-r-full bg-lilac-300 shadow-[0_0_14px_3px_rgba(171,141,255,0.8)]"
+                className="absolute -left-4 top-2.5 h-6 w-1 rounded-r-full bg-lilac-300 shadow-[0_0_14px_3px_rgba(104,180,157,0.65)]"
               />
             </>
           )}

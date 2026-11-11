@@ -14,7 +14,7 @@ export function ManagementModal({ title, description, onClose, children }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="management-modal-title"
-        className="glass-strong relative z-10 my-auto w-full max-w-xl rounded-3xl p-5 sm:p-7"
+        className="glass-strong relative z-10 my-auto max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-3xl p-5 sm:p-7"
       >
         <div className="flex items-start justify-between gap-4">
           <div>

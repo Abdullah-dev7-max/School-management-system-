@@ -58,7 +58,7 @@ function StudentDialog({ student, classes, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto p-3 sm:p-5">
       <button
         type="button"
         aria-label="Close dialog"
@@ -70,14 +70,19 @@ function StudentDialog({ student, classes, onClose, onSave }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="student-dialog-title"
-        className="glass-strong relative z-10 my-auto w-full max-w-xl rounded-3xl p-5 sm:p-7"
+        className="glass-strong relative z-10 my-auto flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-3xl"
       >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 id="student-dialog-title" className="text-lg font-semibold">
-              {student ? 'Edit student' : 'Add new student'}
-            </h2>
-            <p className="mt-1 text-sm text-ink/60">Student details and class assignment</p>
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-ink/5 px-5 py-4 sm:px-7">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-lilac-100 text-lilac-600">
+              <Users className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <h2 id="student-dialog-title" className="text-lg font-semibold">
+                {student ? 'Edit student' : 'Add new student'}
+              </h2>
+              <p className="mt-1 text-sm text-ink/60">Student details and class assignment</p>
+            </div>
           </div>
           <button
             type="button"
@@ -90,71 +95,65 @@ function StudentDialog({ student, classes, onClose, onSave }) {
           </button>
         </div>
 
-        <form onSubmit={submit} className="mt-5 space-y-4">
-          <label className="block text-sm font-medium">
-            Full name
-            <input name="fullName" value={form.fullName} onChange={change} required maxLength={120} className={FIELD} autoFocus />
-          </label>
-
-          <label className="block text-sm font-medium">
-            Email
-            <input name="email" type="email" value={form.email} onChange={change} required maxLength={255} className={FIELD} />
-          </label>
-
-          <label className="block text-sm font-medium">
-            Phone
-            <input name="phone" type="tel" value={form.phone} onChange={change} maxLength={32} className={FIELD} />
-          </label>
-
-          <label className="block text-sm font-medium">
-            {student ? 'New password (optional)' : 'Initial password (at least 12 characters)'}
-            <input
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={change}
-              required={!student}
-              minLength={form.password ? 12 : undefined}
-              autoComplete="new-password"
-              placeholder={student ? 'Leave blank to keep current password' : undefined}
-              className={FIELD}
-            />
-          </label>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-sm font-medium">
-              Admission number
-              <input name="admissionNo" value={form.admissionNo} onChange={change} required maxLength={64} className={FIELD} />
-            </label>
-            <label className="block text-sm font-medium">
-              Roll number
-              <input name="rollNo" type="number" min="1" step="1" value={form.rollNo} onChange={change} className={FIELD} />
-            </label>
+        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 space-y-3 overflow-y-auto px-5 py-4 sm:px-7">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-medium">
+                Full name
+                <input name="fullName" value={form.fullName} onChange={change} required maxLength={120} className={FIELD} autoFocus />
+              </label>
+              <label className="block text-sm font-medium">
+                Email
+                <input name="email" type="email" value={form.email} onChange={change} required maxLength={255} className={FIELD} />
+              </label>
+              <label className="block text-sm font-medium">
+                Phone
+                <input name="phone" type="tel" value={form.phone} onChange={change} maxLength={32} className={FIELD} />
+              </label>
+              <label className="block text-sm font-medium">
+                {student ? 'New password (optional)' : 'Initial password (at least 12 characters)'}
+                <input
+                  name="password"
+                  type="password"
+                  value={form.password}
+                  onChange={change}
+                  required={!student}
+                  minLength={form.password ? 12 : undefined}
+                  autoComplete="new-password"
+                  placeholder={student ? 'Leave blank to keep current password' : undefined}
+                  className={FIELD}
+                />
+              </label>
+              <label className="block text-sm font-medium">
+                Admission number
+                <input name="admissionNo" value={form.admissionNo} onChange={change} required maxLength={64} className={FIELD} />
+              </label>
+              <label className="block text-sm font-medium">
+                Roll number
+                <input name="rollNo" type="number" min="1" step="1" value={form.rollNo} onChange={change} className={FIELD} />
+              </label>
+              <label className="block text-sm font-medium">
+                Class
+                <select name="classId" value={form.classId} onChange={change} className={FIELD}>
+                  <option value="">Unassigned</option>
+                  {classes.map((item) => (
+                    <option key={item.id} value={item.id}>{classLabel(item)}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm font-medium">
+                Status
+                <select name="status" value={form.status} onChange={change} className={FIELD}>
+                  {Object.entries(STATUS).map(([value, item]) => (
+                    <option key={value} value={value}>{item.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-sm font-medium">
-              Class
-              <select name="classId" value={form.classId} onChange={change} className={FIELD}>
-                <option value="">Unassigned</option>
-                {classes.map((item) => (
-                  <option key={item.id} value={item.id}>{classLabel(item)}</option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-sm font-medium">
-              Status
-              <select name="status" value={form.status} onChange={change} className={FIELD}>
-                {Object.entries(STATUS).map(([value, item]) => (
-                  <option key={value} value={value}>{item.label}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
-
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex shrink-0 justify-end gap-2 border-t border-ink/5 px-5 py-3 sm:px-7">
             <button type="button" disabled={saving} onClick={onClose} className="h-10 rounded-xl px-4 text-sm font-medium hover:bg-ink/5 disabled:opacity-50">
               Cancel
             </button>

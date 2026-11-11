@@ -4,7 +4,7 @@ import SectionHeader from '../ui/SectionHeader.jsx'
 import ChartTooltip from '../charts/ChartTooltip.jsx'
 import { pkr, pkrCompact } from '../../lib/format.js'
 
-const tick = { fill: 'rgba(27,22,51,0.55)', fontSize: 12 }
+const tick = { fill: 'rgba(24,49,58,0.62)', fontSize: 12 }
 
 export default function RevenueChart({ data }) {
   const total = data.reduce((sum, m) => sum + m.revenue, 0)
@@ -17,11 +17,11 @@ export default function RevenueChart({ data }) {
           <AreaChart data={data} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
             <defs>
               <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#8F68F5" stopOpacity={0.45} />
-                <stop offset="100%" stopColor="#C7B5FF" stopOpacity={0.03} />
+                <stop offset="0%" stopColor="#348F78" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="#C4E3D9" stopOpacity={0.04} />
               </linearGradient>
             </defs>
-            <CartesianGrid vertical={false} stroke="rgba(27,22,51,0.07)" />
+            <CartesianGrid vertical={false} stroke="rgba(24,49,58,0.1)" />
             <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={false} />
             <YAxis
               tick={tick}
@@ -29,12 +29,12 @@ export default function RevenueChart({ data }) {
               axisLine={false}
               tickFormatter={(v) => new Intl.NumberFormat('en', { notation: 'compact' }).format(v)}
             />
-            <Tooltip content={<ChartTooltip formatter={pkr} />} cursor={{ stroke: '#AB8DFF', strokeDasharray: 4 }} />
+            <Tooltip content={<ChartTooltip formatter={pkr} />} cursor={{ stroke: '#68B49D', strokeDasharray: 4 }} />
             <Area
               type="monotone"
               dataKey="revenue"
               name="Collected"
-              stroke="#7648E0"
+              stroke="#24735F"
               strokeWidth={2.5}
               fill="url(#revenueFill)"
               activeDot={{ r: 5, strokeWidth: 2, stroke: '#fff' }}

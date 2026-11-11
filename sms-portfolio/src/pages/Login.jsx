@@ -165,7 +165,7 @@ export default function Login() {
   return (
     <main className="relative grid min-h-screen place-items-center overflow-hidden bg-canvas p-4">
       <div aria-hidden="true" className="pointer-events-none absolute -left-20 top-1/4 h-80 w-80 rounded-full bg-lilac-300/40 blur-3xl" />
-      <div aria-hidden="true" className="pointer-events-none absolute -right-20 bottom-0 h-96 w-96 rounded-full bg-pink-200/50 blur-3xl" />
+      <div aria-hidden="true" className="pointer-events-none absolute -right-20 bottom-0 h-96 w-96 rounded-full bg-amber-200/35 blur-3xl" />
       <GlassCard className="relative w-full max-w-lg p-6 sm:p-8">
         <div className="mb-6 flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-lilac-400 to-lilac-600 text-white shadow-glow">

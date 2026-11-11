@@ -43,9 +43,9 @@ export default function Layout() {
     <div className="relative flex h-screen overflow-hidden bg-canvas">
       {/* Ambient colour behind the glass surfaces */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-24 top-1/3 h-[26rem] w-[26rem] rounded-full bg-lilac-300/40 blur-3xl" />
-        <div className="absolute -right-24 bottom-0 h-[30rem] w-[30rem] rounded-full bg-pink-200/50 blur-3xl" />
-        <div className="absolute left-1/2 top-0 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl" />
+        <div className="absolute -left-24 top-1/3 h-[26rem] w-[26rem] rounded-full bg-lilac-300/30 blur-3xl" />
+        <div className="absolute -right-24 bottom-0 h-[30rem] w-[30rem] rounded-full bg-amber-200/35 blur-3xl" />
+        <div className="absolute left-1/2 top-0 h-72 w-72 rounded-full bg-teal-200/30 blur-3xl" />
       </div>
 
       <Sidebar collapsed={collapsed} mobileOpen={mobileOpen} onCloseMobile={closeMobile} />

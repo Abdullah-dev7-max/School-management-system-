@@ -327,7 +327,7 @@ export default function LoadingScreen({ label = 'Preparing your workspace' }) {
 
       <section aria-hidden="true" className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="pointer-events-none absolute -right-24 -top-32 h-80 w-80 rounded-full bg-lilac-300/30 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-40 left-1/3 h-96 w-96 rounded-full bg-pink-200/35 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-40 left-1/3 h-96 w-96 rounded-full bg-amber-200/25 blur-3xl" />
 
         <header className="relative flex h-[72px] items-center justify-between border-b border-ink/5 bg-white/35 px-4 backdrop-blur-xl sm:px-7 lg:px-9">
           <div className="flex items-center gap-3">
