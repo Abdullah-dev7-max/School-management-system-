@@ -122,7 +122,21 @@ export default function Login() {
             emailRedirectTo: `${window.location.origin}/login`,
           },
         })
-        if (signupError) throw signupError
+        if (signupError) {
+          const { data: signupStillOpen, error: statusError } = await supabase.rpc('admin_signup_open')
+          if (!statusError && signupStillOpen !== true) {
+            setRegistering(false)
+            setConfirmPassword('')
+            setAdminSignupAvailable(false)
+            const { data: confirmationPending, error: confirmationError } = await supabase.rpc('admin_signup_pending_confirmation')
+            if (confirmationError) {
+              throw new Error(`The one-time Admin setup has already been claimed. Sign in with the existing Admin account. Confirmation status could not be checked: ${confirmationError.message}`)
+            }
+            setAdminConfirmationPending(confirmationPending === true)
+            throw new Error('The one-time Admin setup has already been claimed. Sign in with the existing Admin account.')
+          }
+          throw signupError
+        }
         setMessage('Check your email and confirm the address before signing in to the Admin dashboard.')
         setRegistering(false)
         setConfirmPassword('')
