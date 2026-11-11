@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Building2, CalendarDays, Check, Info, Save, UserRound } from 'lucide-react'
+import { Building2, Check, Info, Save, UserRound } from 'lucide-react'
 import { useAsync } from '../hooks/useAsync.js'
 import { useRole } from '../context/RoleContext.jsx'
 import { fetchInstituteSettings, saveInstituteSettings } from '../lib/api.js'
@@ -38,7 +38,6 @@ export default function Settings() {
       schoolName: settingsQuery.data.school_name,
       address: settingsQuery.data.address ?? '',
       contactEmail: settingsQuery.data.contact_email,
-      academicYear: settingsQuery.data.academic_year,
     })
   }, [settingsQuery.data])
 
@@ -77,8 +76,8 @@ export default function Settings() {
 
   const saveSchool = async (event) => {
     event.preventDefault()
-    if (!school?.schoolName.trim() || !school.contactEmail.trim() || !school.academicYear.trim()) {
-      setSchoolError('Complete the school name, contact email, and academic year.')
+    if (!school?.schoolName.trim() || !school.contactEmail.trim()) {
+      setSchoolError('Complete the school name and contact email.')
       return
     }
 
@@ -148,16 +147,7 @@ export default function Settings() {
               School address
               <textarea name="address" value={school.address} onChange={changeSchool} maxLength={500} rows={3} className="mt-1.5 w-full rounded-xl border border-ink/10 bg-white px-3 py-2.5 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-lilac-500/60" />
             </label>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Contact email" type="email" name="contactEmail" value={school.contactEmail} onChange={changeSchool} maxLength={255} required />
-              <label className="block text-sm font-medium">
-                Current academic year
-                <span className="relative mt-1.5 block">
-                  <CalendarDays aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
-                  <input name="academicYear" value={school.academicYear} onChange={changeSchool} maxLength={20} required className="h-11 w-full rounded-xl border border-ink/10 bg-white pl-10 pr-3 text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-lilac-500/60" />
-                </span>
-              </label>
-            </div>
+            <Field label="Contact email" type="email" name="contactEmail" value={school.contactEmail} onChange={changeSchool} maxLength={255} required />
             <Feedback error={schoolError} message={schoolMessage} />
             <div className="flex justify-end pt-1">
               <button type="submit" disabled={savingSchool} className={`${FORM_BUTTON} bg-night-900 text-white`}>
@@ -171,7 +161,7 @@ export default function Settings() {
       <GlassCard className="flex items-start gap-3 p-4 sm:p-5">
         <Info className="mt-0.5 h-5 w-5 shrink-0 text-lilac-600" />
         <p className="text-sm text-ink/65">
-          Fee amounts and due dates are managed in Fees. Class teachers, rooms, and class-specific academic years are managed in Classes.
+          Academic years and class teachers are managed per class in Classes. Fee amounts and due dates are managed in Fees.
         </p>
       </GlassCard>
     </div>

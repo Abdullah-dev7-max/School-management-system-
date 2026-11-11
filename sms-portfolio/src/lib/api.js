@@ -68,7 +68,6 @@ export async function fetchInstituteSettings() {
     school_name: '',
     address: null,
     contact_email: '',
-    academic_year: currentAcademicYear(),
   }
 }
 
@@ -85,7 +84,6 @@ export async function saveInstituteSettings(settings) {
     school_name: settings.schoolName.trim(),
     address: settings.address.trim() || null,
     contact_email: settings.contactEmail.trim(),
-    academic_year: settings.academicYear.trim(),
   }, { onConflict: 'id' }))
 }
 
@@ -273,7 +271,7 @@ export async function deleteTeacher(userId) {
 }
 
 export async function fetchClassesPage() {
-  const [classResult, studentResult, teacherResult, settingsResult] = await Promise.all([
+  const [classResult, studentResult, teacherResult] = await Promise.all([
     supabase
       .from('classes')
       .select('id, name, section, room, academic_year, class_teacher_id')
@@ -282,12 +280,10 @@ export async function fetchClassesPage() {
       .order('section'),
     supabase.from('students').select('class_id'),
     supabase.from('teachers').select('id, user_id, teacher:users!user_id(full_name)'),
-    supabase.from('institute_settings').select('academic_year').limit(1),
   ])
   const classes = unwrap(classResult)
   const studentRows = unwrap(studentResult)
   const teachers = unwrap(teacherResult)
-  const settings = unwrap(settingsResult)?.[0]
   const teacherById = Object.fromEntries(teachers.map((teacher) => [teacher.id, teacher]))
   const studentCounts = studentRows.reduce((counts, student) => {
     if (student.class_id) counts[student.class_id] = (counts[student.class_id] ?? 0) + 1
@@ -300,7 +296,7 @@ export async function fetchClassesPage() {
       classTeacher: item.class_teacher_id ? teacherById[item.class_teacher_id]?.teacher?.full_name ?? null : null,
     })),
     teachers,
-    academicYear: settings?.academic_year ?? currentAcademicYear(),
+    academicYear: currentAcademicYear(),
   }
 }
 
